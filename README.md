@@ -12,7 +12,7 @@ It also hosts Federation Commander Online.
 [Star Fleet Battles](http:www.starfleetgames.com "Amarillo Design Board website") is a Star Trek wargame that pits several of the empires that people know and love, against eachother. Originally released in the '70s, it has a long game history that diverges from the 'official' paramount history at the animated series and before the movies. This has freed them to add new dynamics between empires, create their own empires, and give a rich breadth to the wargaming experience.
 
 # Usage
-'''
+```
 #!/usr/bin/php -q
 <?php
 /*****
@@ -31,9 +31,9 @@ print_r( $log->read("1.25") );
 print_r( $log->get_sequence() );
 
 ?>
-'''
+```
 
-'''
+```
 Units:
 Array
 (
@@ -214,4 +214,4 @@ Array
     [33] => SEQUENCE_DIS_DEV_OPERATE
     [34] => SEQUENCE_IMPULSE_END
 )
-'''
+```
