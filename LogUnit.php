@@ -17,8 +17,10 @@
 
 class LogUnit
 {
+  public $added = 0; # When the unit was added to the board
   public $error = ""; # error string, should something fail
   public $name = ""; # name of the unit
+  public $removed = 0; # when the unit was removed from the board (Last impulse, if not removed)
   public $type = ""; # the unit type (e.g. "LDR TCWL")
   public $basicType = ""; # the basic unit type (e.g. "ship", "drone", etc...)
   public $weapons = array(); # The type of weapons and their ID number. Format is [] = array( [weapon],[number],[arc] )
@@ -35,12 +37,15 @@ class LogUnit
   private $FRAMEREGEX = "/^Impulse (\d*\.\d*):$/";
   private $INTERNALSREGEX = "/^Total # of Internals = (\d+)$/";
   private $LOCATIONREGEX = "/^(.*) has (moved|side-slipped|turned) to (\d{2,2})(\d{2,2})(\w+)$/";
-  private $REMOVEREGEX = "/^(.+) has been removed$/";
+  private $REMOVEREGEX = "/^(.+) has been (?:removed|discarded)$/";
   private $SPEEDREGEX = "/^(.+) (changed|initial) speed to (\d+)$/";
   private $TRACTORDOWNREGEX = "/^(.+) drops tractor on (.+)$/";
   private $TRACTORUPREGEX = "/^(.+) tractors (.+)$/";
   private $WEAPONREGEX = "/^(.*) fires (.+) #(\w+) \((.+)\) at (.*?) (using .*)?\(Range: (\d+)\)$/";
+  private $pointerFacing = "A"; # tracks the last facing found. Used to determine HETs
+  private $pointerSpeed = 0; # tracks the last speed change found. Used to determine TACs
   private $pointerTime = 0; # tracks the last impulse found, so any events can go to the right impulse
+
   ###
   # Class constructor
   ###
@@ -97,6 +102,7 @@ class LogUnit
           $this->modify( $this->pointerTime, "speed", 0 );
         else
           $this->modify( $this->pointerTime, "speed", $matches[5] );
+        $this->added = $this->pointerTime;
         continue; # Go to next line if the ADDREGEX matched
       }
   # DAMAGEREGEX
@@ -133,7 +139,11 @@ class LogUnit
       $status = preg_match( $this->FACINGREGEX, $line, $matches );
       if( $status == 1 && $matches[1] == $this->name )
       {
-        $this->modify( $this->pointerTime, "facing", $matches[2], $matches[3] );
+        $newFacing = $matches[2];
+        $reason = $this->isHetTac( $newFacing, $this->pointerFacing, $this->pointerSpeed );
+        if( $reason == "" )
+          $reason = $matches[3]; # number of movement since the last turn
+        $this->modify( $this->pointerTime, "facing", $newFacing, $reason );
         continue; # Go to next line if the FACINGREGEX matched
       }
   # LOCATIONREGEX
@@ -143,10 +153,15 @@ class LogUnit
         # create the "reason" for the facing
         if( $matches[2] == "moved" )
           $reason = "move";
-        else if( $matches[2] == "turned" )
-          $reason = "turn";
-        else
+        else if( $matches[2] == "side-slipped" )
           $reason = "side-slip";
+        else
+        {
+          $reason = $this->isHetTac( $matches[5], $this->pointerFacing, $this->pointerSpeed );
+          if( $reason == "" )
+            $reason = "turn";
+        }
+
         $this->modify( $this->pointerTime, "facing", $matches[5], $reason );
         $this->modify( $this->pointerTime, "location", $matches[3].$matches[4] );
         continue; # Go to next line if the LOCATIONREGEX matched
@@ -156,12 +171,14 @@ class LogUnit
       if( $status == 1 && $matches[1] == $this->name )
       {
         $this->modify( $this->pointerTime, "remove", $this->name );
+        $this->removed = $this->pointerTime;
         continue; # Go to next line if the REMOVEREGEX matched
       }
   # SPEEDREGEX
       $status = preg_match( $this->SPEEDREGEX, $line, $matches );
       if( $status == 1 && $matches[1] == $this->name )
       {
+        $this->pointerSpeed = $matches[3];
         $this->modify( $this->pointerTime, "speed", $matches[3] );
         continue; # Go to next line if the SPEEDREGEX matched
       }
@@ -194,6 +211,9 @@ class LogUnit
         continue; # Go to next line if the WEAPONREGEX matched
       }
     }
+    # if we never saw a "removed" statement for this unit, thne set "removed" to the last impulse
+    if( $this->removed == 0 )
+      $this->removed = $this->pointerTime;
   }
 
   ###
@@ -336,6 +356,40 @@ class LogUnit
       break;
     }
     return TRUE;
+  }
+
+  ###
+  # Determines if a facing change is a HET or a TAC
+  ###
+  # Args are:
+  # - (string) The time, in 'turn.impulses' notation
+  # Returns:
+  # - (string) Returns "HET" is a direction change greater than 1 facing
+  #            Returns "TAC" if the speed is 0
+  #            Returns "" if none of the above
+  ###
+  function isHetTac( $new, $old, $speed )
+  {
+    $newFaceOrd = ord(strtolower($new))-96;
+    $oldFaceOrd = ord(strtolower($old))-96;
+    $letterDistance = 5; # ord('f') - ord('a')
+    $reason = 0;
+
+    # determine how many facings the turn encompases
+    $distance = $newFaceOrd - $oldFaceOrd;
+    if( abs($distance) < 4 ) # handles any facings that don't cross the A/F division
+      $distance = $distance;
+    else if( $distance < 0 ) # CW changes across the A/F barrier
+      $distance = $letterDistance + $distance +1;
+    else if( $distance > 0 ) # CCW changes across the A/F barrier
+      $distance = $letterDistance - $distance -1;
+     # $distance is 0-5. '+' is clockwise, '-' is CCW
+
+     if( abs($distance) > 1 )
+      $reason = "HET";
+    else if( abs($distance) == 1 && $speed == 0 )
+      $reason = "TAC";
+    return $reason;
   }
 
   ###

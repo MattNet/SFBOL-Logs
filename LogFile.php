@@ -125,13 +125,19 @@ class LogFile
   # Args are:
   # - None
   # Returns:
-  # - (array) Collection of units and their types. Format is [] = ["name"=>"", "type"=>"", "basic"=>"" ]
+  # - (array) Collection of units and their information
   ###
   function get_units ()
   {
     $output = array();
     foreach( $this->UNIT_LOOKUP as $unit=>$value )
-      $output[] = array( "name"=>$unit, "type"=> $this->UNITS[ $value ]->type, "basic"=> $this->UNITS[ $value ]->basicType );
+      $output[] = array(
+        "added"=> $this->UNITS[ $value ]->added,
+        "basic"=> $this->UNITS[ $value ]->basicType,
+        "name"=>$unit,
+        "removed"=> $this->UNITS[ $value ]->removed
+        "type"=> $this->UNITS[ $value ]->type,
+      );
     return $output;
   }
 
