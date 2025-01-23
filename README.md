@@ -19,6 +19,7 @@ It also hosts Federation Commander Online.
 Extracts log info from a SFBOL log file.
 - Shows the units created in the file
 - Shows the events of impulse 25 of turn 1
+- Shows the indicies to the impulse sequence
  ****/
 
 include_once( "./LogFile.php" );
@@ -27,7 +28,10 @@ $log = new LogFile( $file );
 
 echo "Units:\n";
 print_r( $log->get_units() );
+
+echo "Impulses:";
 print_r( $log->read("1.25") );
+
 print_r( $log->get_sequence() );
 
 ?>
@@ -39,142 +43,140 @@ Array
 (
     [0] => Array
         (
-            [name] => Big Cat
-            [type] => Lyran TCC
+            [added] => 0
             [basic] => ship
+            [name] => Ballerina
+            [removed] => 64
+            [type] => Romulan TKR
         )
+
     [1] => Array
         (
-            [name] => closerun
-            [type] => Hydran TLM
+            [added] => 0
             [basic] => ship
+            [name] => liard
+            [removed] => 64
+            [type] => Gorn TCC
         )
+
     [2] => Array
         (
-            [name] => S01.1.7
-            [type] => Hydran Fighter
-            [basic] => shuttle
+            [added] => 17
+            [basic] => plasma
+            [name] => liard-PA(60).1.17
+            [removed] => 33
+            [type] => Gorn Plasma
         )
+
     [3] => Array
         (
-            [name] => S02.1.8
-            [type] => Hydran Fighter
-            [basic] => shuttle
+            [added] => 27
+            [basic] => plasma
+            [name] => Ballerina-PA(60).1.27
+            [removed] => 33
+            [type] => TKR Plasma
         )
+
     [4] => Array
         (
-            [name] => ESG #A
-            [type] => Lyran ESG
-            [basic] => esg
+            [added] => 60
+            [basic] => plasma
+            [name] => liard-PB(30).2.28
+            [removed] => 64
+            [type] => Gorn Plasma
         )
+
     [5] => Array
         (
-            [name] => 
-            [type] => Hydran Fighter
-            [basic] => shuttle
+            [added] => 63
+            [basic] => plasma
+            [name] => Ballerina-PB(60).2.31
+            [removed] => 64
+            [type] => TKR Plasma
         )
+
 )
+
+Impulses:
 Array
 (
     [0] => Array
         (
             [0] => Array
                 (
-                    [0] => D
-                    [1] => side-slip
-                    [owner] => Big Cat
+                    [facing] => D
+                    [location] => 1712
+                    [owner] => Ballerina
+                    [turn] => move
                 )
+
             [1] => Array
                 (
-                    [0] => 1814
-                    [owner] => Big Cat
+                    [facing] => A
+                    [location] => 2517
+                    [owner] => liard
+                    [turn] => side-slip
                 )
-            [2] => Array
-                (
-                    [0] => A
-                    [1] => move
-                    [owner] => closerun
-                )
-            [3] => Array
-                (
-                    [0] => 1722
-                    [owner] => closerun
-                )
+
         )
-    [26] => Array
+
+    [9] => Array
         (
             [0] => Array
                 (
-                    [0] => Array
-                        (
-                            [0] => Disruptor #A
-                            [1] => closerun
-                        )
-                    [1] => Array
-                        (
-                            [0] => Disruptor #B
-                            [1] => closerun
-                        )
-                    [2] => Array
-                        (
-                            [0] => Disruptor #C
-                            [1] => closerun
-                        )
-                    [3] => Array
-                        (
-                            [0] => Disruptor #D
-                            [1] => closerun
-                        )
-                    [4] => Array
-                        (
-                            [0] => Phaser-1 #1
-                            [1] => S01.1.7
-                        )
-                    [5] => Array
-                        (
-                            [0] => Phaser-1 #2
-                            [1] => S01.1.7
-                        )
-                    [6] => Array
-                        (
-                            [0] => Phaser-1 #5
-                            [1] => S01.1.7
-                        )
-                    [7] => Array
-                        (
-                            [0] => Phaser-1 #6
-                            [1] => S02.1.8
-                        )
-                    [8] => Array
-                        (
-                            [0] => Phaser-1 #7
-                            [1] => S02.1.8
-                        )
-                    [9] => Array
-                        (
-                            [0] => Phaser-1 #8
-                            [1] => S02.1.8
-                        )
-                    [owner] => Big Cat
+                    [owner] => Ballerina
+                    [speed] => 30
                 )
+
         )
+
     [32] => Array
         (
             [0] => Array
                 (
-                    [0] => 19
-                    [1] => 0
-                    [owner] => closerun
+                    [internals] => 0
+                    [owner] => Ballerina
+                    [reinforcement] => 0
+                    [shields] => 1
+                    [total] => 1
                 )
+
         )
-    [34] => Array
+
+    [26] => Array
         (
             [0] => Array
                 (
-                    [0] => S02.1.8
-                    [owner] => S02.1.8
+                    [arc] => FA+L
+                    [id] => 1
+                    [owner] => liard
+                    [target] => Ballerina
+                    [weapon] => Phaser-1
                 )
+
+            [1] => Array
+                (
+                    [arc] => FA+R
+                    [id] => 2
+                    [owner] => liard
+                    [target] => Ballerina
+                    [weapon] => Phaser-1
+                )
+
         )
+
+    [3] => Array
+        (
+            [0] => Array
+                (
+                    [facing] => F
+                    [location] => 2216
+                    [owner] => ECPA(30).1.17
+                    [turn] => move
+                )
+
+        )
+
 )
 Array
 (

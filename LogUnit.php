@@ -36,7 +36,7 @@ class LogUnit
   private $FACINGREGEX = "/^(.+) has changed to facing (\w+) after (.+) move\(s\)$/";
   private $FRAMEREGEX = "/^Impulse (\d*\.\d*):$/";
   private $INTERNALSREGEX = "/^Total # of Internals = (\d+)$/";
-  private $LOCATIONREGEX = "/^(.*) has (moved|side-slipped|turned) to (\d{2,2})(\d{2,2})(\w+)$/";
+  private $LOCATIONREGEX = "/^(.*) has (moved|side-slipped|turned) to (\d{4,4})(\w+)$/";
   private $REMOVEREGEX = "/^(.+) has been (?:removed|discarded)$/";
   private $SPEEDREGEX = "/^(.+) (changed|initial) speed to (\d+)$/";
   private $TRACTORDOWNREGEX = "/^(.+) drops tractor on (.+)$/";
@@ -89,31 +89,35 @@ class LogUnit
       {
         if( $this->type != "" )
           continue; # skip adding more if we have already defined this object
-        $this->name = $matches[1];
-        $this->type = $matches[2];
-        $this->basicType = self::get_basic_type( $this->type );
-        $this->modify( $this->pointerTime, "add", $this->type );
-        $this->modify( $this->pointerTime, "location", $matches[3] );
-        if( ! isset($matches[4]) )
-          $this->modify( $this->pointerTime, "facing", "A", "0" );
-        else
-          $this->modify( $this->pointerTime, "facing", $matches[4], "0" );
-        if( ! isset($matches[5]) )
-          $this->modify( $this->pointerTime, "speed", 0 );
-        else
-          $this->modify( $this->pointerTime, "speed", $matches[5] );
+        list( , $this->name, $this->type, $location ) = $matches;
+
+        # fill out the object and tag information
         $this->added = $this->pointerTime;
+        $this->basicType = self::get_basic_type( $this->type );
+        $output = array( "facing"=>"A", "location"=>$location, "speed"=>0, "type"=>$this->type, "owner"=>$this->name );
+        if( isset($matches[4]) )
+          $output["facing"] = $matches[4];
+        if( isset($matches[5]) )
+          $output["speed"] = intval($matches[5]);
+
+        # add the tag information to the impulse
+        if( ! isset($this->impulses[ $this->pointerTime ]) )
+          $this->impulses[ $this->pointerTime ] = array();
+        $this->impulses[ $this->pointerTime ]["add"] = $output;
+
         continue; # Go to next line if the ADDREGEX matched
       }
   # DAMAGEREGEX
       $status = preg_match( $this->DAMAGEREGEX, $line, $matches );
       if( $status == 1 && $matches[1] == $this->name )
       {
+        $damage = 0;
         $internals = 0;
+        $reinforcement = 0;
         # get the total damage from the second line
         $status = preg_match( $this->DMGAREGEX, $log[$lineNum+1], $matches );
         if( $status == 1 )
-          $damage = $matches[7]; # pull the total damage from the second line
+          $damage = intval($matches[7]); # pull the total damage from the second line
         else
         {
           $this->error .= "Damage announcement line without subsequent allocation. Line ".($lineNum+1)."\n";
@@ -122,7 +126,7 @@ class LogUnit
         # get the total reinforcement from the third line
         $status = preg_match( $this->DMGBREGEX, $log[$lineNum+2], $matches );
         if( $status == 1 )
-          $damage -= $matches[1]+$matches[2]+$matches[3]+$matches[4]+$matches[5]+$matches[6];
+          $reinforcement = intval($matches[1]+$matches[2]+$matches[3]+$matches[4]+$matches[5]+$matches[6]);
         else
         {
           $this->error .= "Damage announcement line without subsequent reinforcement allocation. Line ".($lineNum+2)."\n";
@@ -131,83 +135,145 @@ class LogUnit
         # get the internals from the fifth line (if applicable)
         $status = preg_match( $this->INTERNALSREGEX, $log[$lineNum+5], $matches );
         if( $status == 1 )
-          $internals = $matches[1];
-        $this->modify( $this->pointerTime, "damage", $damage, $internals );
+          $internals = intval($matches[1]);
+
+        $shields = $damage - $reinforcement - $internals;
+        $output = array( "internals"=>$internals, "owner"=>$this->name, "reinforcement"=>$reinforcement, "shields"=>$shields, "total"=>$damage );
+
+        # add the tag information to the impulse
+        if( ! isset($this->impulses[ $this->pointerTime ]) )
+          $this->impulses[ $this->pointerTime ] = array();
+        # this is an array of damages, because damage can happen many times an impulse
+        $this->impulses[ $this->pointerTime ]["damage"][] = $output;
+
         continue; # Go to next line if the DAMAGEREGEX matched
       }
   # FACINGREGEX
       $status = preg_match( $this->FACINGREGEX, $line, $matches );
       if( $status == 1 && $matches[1] == $this->name )
       {
-        $newFacing = $matches[2];
+        list( , , $newFacing, $moves ) = $matches;
         $reason = $this->isHetTac( $newFacing, $this->pointerFacing, $this->pointerSpeed );
         if( $reason == "" )
-          $reason = $matches[3]; # number of movement since the last turn
-        $this->modify( $this->pointerTime, "facing", $newFacing, $reason );
+          $reason = $moves; # set to the number of movement since the last turn if not a HET or TAC
+
+        # fill out the object and tag information
+        $output = array( "facing"=>$newFacing, "owner"=>$this->name, "turn"=>$reason );
+        $this->pointerFacing = $newFacing; # set pointerFacing after the HET check
+
+        # add the tag information to the impulse
+        if( ! isset($this->impulses[ $this->pointerTime ]) )
+          $this->impulses[ $this->pointerTime ] = array();
+        $this->impulses[ $this->pointerTime ]["facing"] = $output;
+
         continue; # Go to next line if the FACINGREGEX matched
       }
   # LOCATIONREGEX
       $status = preg_match( $this->LOCATIONREGEX, $line, $matches );
       if( $status == 1 && $matches[1] == $this->name )
       {
-        # create the "reason" for the facing
-        if( $matches[2] == "moved" )
+        list( , , $type, $location, $facing ) = $matches;
+        # determine the method of facing change
+        if( $type == "moved" )
           $reason = "move";
-        else if( $matches[2] == "side-slipped" )
+        else if( $type == "side-slipped" )
           $reason = "side-slip";
         else
         {
-          $reason = $this->isHetTac( $matches[5], $this->pointerFacing, $this->pointerSpeed );
+          $reason = $this->isHetTac( $facing, $this->pointerFacing, $this->pointerSpeed );
           if( $reason == "" )
             $reason = "turn";
         }
 
-        $this->modify( $this->pointerTime, "facing", $matches[5], $reason );
-        $this->modify( $this->pointerTime, "location", $matches[3].$matches[4] );
+        # fill out the object and tag information
+        $output = array( "facing"=>$facing, "location"=>$location, "owner"=>$this->name, "turn"=>$reason );
+        $this->pointerFacing = $facing; # set pointerFacing after the HET check
+
+        # add the tag information to the impulse
+        if( ! isset($this->impulses[ $this->pointerTime ]) )
+          $this->impulses[ $this->pointerTime ] = array();
+        $this->impulses[ $this->pointerTime ]["location"] = $output;
+
         continue; # Go to next line if the LOCATIONREGEX matched
       }
   # REMOVEREGEX
       $status = preg_match( $this->REMOVEREGEX, $line, $matches );
       if( $status == 1 && $matches[1] == $this->name )
       {
-        $this->modify( $this->pointerTime, "remove", $this->name );
+        # fill out the object and tag information
+        $output = array( "add"=>$this->added, "owner"=>$this->name, "remove"=>$this->pointerTime, "type"=>$this->type );
         $this->removed = $this->pointerTime;
+
+        # add the tag information to the impulse
+        if( ! isset($this->impulses[ $this->pointerTime ]) )
+          $this->impulses[ $this->pointerTime ] = array();
+        $this->impulses[ $this->pointerTime ]["remove"] = $output;
+
         continue; # Go to next line if the REMOVEREGEX matched
       }
   # SPEEDREGEX
       $status = preg_match( $this->SPEEDREGEX, $line, $matches );
       if( $status == 1 && $matches[1] == $this->name )
       {
-        $this->pointerSpeed = $matches[3];
-        $this->modify( $this->pointerTime, "speed", $matches[3] );
+        # fill out the object and tag information
+        $this->pointerSpeed = intval($matches[3]);
+        $output = array( "owner"=>$this->name, "speed"=>$this->pointerSpeed );
+
+        # add the tag information to the impulse
+        if( ! isset($this->impulses[ $this->pointerTime ]) )
+          $this->impulses[ $this->pointerTime ] = array();
+        $this->impulses[ $this->pointerTime ]["speed"] = $output;
+
         continue; # Go to next line if the SPEEDREGEX matched
       }
   # TRACTORDOWNREGEX
       $status = preg_match( $this->TRACTORDOWNREGEX, $line, $matches );
       if( $status == 1 && $matches[1] == $this->name )
       {
-        $this->modify( $this->pointerTime, "tractordown", $matches[2] );
+        # fill out the tag information
+        $output = array( "owner"=>$this->name, "target"=>$matches[2] );
+
+        # add the tag information to the impulse
+        if( ! isset($this->impulses[ $this->pointerTime ]) )
+          $this->impulses[ $this->pointerTime ] = array();
+        $this->impulses[ $this->pointerTime ]["tractordown"] = $output;
+
         continue; # Go to next line if the TRACTORDOWNREGEX matched
       }
   # TRACTORUPREGEX
       $status = preg_match( $this->TRACTORUPREGEX, $line, $matches );
       if( $status == 1 && $matches[1] == $this->name )
       {
-        $this->modify( $this->pointerTime, "tractorup", $matches[2] );
+        # fill out the tag information
+        $output = array( "owner"=>$this->name, "target"=>$matches[2] );
+
+        # add the tag information to the impulse
+        if( ! isset($this->impulses[ $this->pointerTime ]) )
+          $this->impulses[ $this->pointerTime ] = array();
+        $this->impulses[ $this->pointerTime ]["tractorup"] = $output;
+
         continue; # Go to next line if the TRACTORUPREGEX matched
       }
   # WEAPONREGEX
       $status = preg_match( $this->WEAPONREGEX, $line, $matches );
       if( $status == 1 && $matches[1] == $this->name )
       {
-        $arc = $matches[4];
-        $wpn = $matches[2];
-        $wpnID = $matches[3];
-        $this->modify( $this->pointerTime, "fire", $wpn." #".$wpnID, $matches[5] );
-        # look through $this->weapons, so that we don't double-up on weapons
-        $stuffer = array( $wpn, $wpnID, $arc );
+        list( , , $wpn, $wpnID, $arc, $target ) = $matches;
+
+        # fill out the object and tag information
+        $output = array( "arc"=>$arc, "id"=>$wpnID, "owner"=>$this->name, "target"=>$target, "weapon"=>$wpn );
+
+        # Add to $this->weapons
+        $stuffer = array( "arc"=>$arc, "id"=>$wpnID, "weapon"=>$wpn );
+        # make sure our input array does not already exist so that we don't double-up entries
         if( ! in_array( $stuffer, $this->weapons ) )
           $this->weapons[] = $stuffer;
+
+        # add the tag information to the impulse
+        if( ! isset($this->impulses[ $this->pointerTime ]) )
+          $this->impulses[ $this->pointerTime ] = array();
+        $this->impulses[ $this->pointerTime ]["fire"][] = $output;
+
         continue; # Go to next line if the WEAPONREGEX matched
       }
     }
@@ -287,78 +353,6 @@ class LogUnit
   }
 
   ###
-  # Modifies $impulses for the given action
-  ###
-  # Args are:
-  # - (int) The time, in impulses notation
-  # - (string) The type of action. allowed keywords are:
-  #     add, facing, fire, location
-  # - (string) The value for the action
-  # - (string) A single note for the action
-  # Returns:
-  # - (boolean) True if successful
-  ###
-  function modify( $time, $type, $value, $reason = "" )
-  {
-    $time = self::convertToImp( $time );
-    if( $time === null )
-    {
-      $this->error .= "Invalid time format in read(). Given '$time'.\n";
-      return NULL;
-    }
-    if( ! isset($this->impulses[ $time ]) )
-      $this->impulses[ $time ] = array();
-    switch( strtolower($type) )
-    {
-    case "add":
-      $this->impulses[ $time ]["add"] = $value;
-      break;
-    case "damage":
-      $output = array( $value );
-      if( $reason != "" )
-        $output[] = $reason;
-      $this->impulses[ $time ]["damage"] = $output;
-      break;
-    case "facing":
-      $output = array( $value );
-      if( $reason != "" )
-        $output[] = $reason;
-      $this->impulses[ $time ]["facing"] = $output;
-      break;
-    case "fire":
-      $output = array( $value );
-      if( $reason != "" )
-        $output[] = $reason;
-      $this->impulses[ $time ]["fire"][] = $output;
-      break;
-    case "location":
-    # I would make this an array, to handle Sabots and displacemnt devices.
-    # but those are much less common than multiple miss-movements
-      $this->impulses[ $time ]["location"] = intval($value);
-      break;
-    case "remove":
-      $this->impulses[ $time ]["remove"] = $value;
-      break;
-    case "speed":
-      $this->impulses[ $time ]["speed"] = intval($value);
-      break;
-    case "tractordown":
-      $output = array( $value );
-      if( $reason != "" )
-        $output[] = $reason;
-      $this->impulses[ $time ]["tractordown"][] = $output;
-      break;
-    case "tractorup":
-      $output = array( $value );
-      if( $reason != "" )
-        $output[] = $reason;
-      $this->impulses[ $time ]["tractorup"][] = $output;
-      break;
-    }
-    return TRUE;
-  }
-
-  ###
   # Determines if a facing change is a HET or a TAC
   ###
   # Args are:
@@ -373,7 +367,7 @@ class LogUnit
     $newFaceOrd = ord(strtolower($new))-96;
     $oldFaceOrd = ord(strtolower($old))-96;
     $letterDistance = 5; # ord('f') - ord('a')
-    $reason = 0;
+    $reason = "";
 
     # determine how many facings the turn encompases
     $distance = $newFaceOrd - $oldFaceOrd;

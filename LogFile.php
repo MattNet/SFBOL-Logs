@@ -10,7 +10,7 @@
 # - Returns a list of each item, in order, than can occur in an impulse
 ###
 
-include_once( "./LogUnit.php" );
+require_once( __DIR__."/LogUnit.php" );
 
 class LogFile
 {
@@ -135,8 +135,8 @@ class LogFile
         "added"=> $this->UNITS[ $value ]->added,
         "basic"=> $this->UNITS[ $value ]->basicType,
         "name"=>$unit,
-        "removed"=> $this->UNITS[ $value ]->removed
-        "type"=> $this->UNITS[ $value ]->type,
+        "removed"=> $this->UNITS[ $value ]->removed,
+        "type"=> $this->UNITS[ $value ]->type
       );
     return $output;
   }
@@ -158,9 +158,11 @@ class LogFile
     {
       # get the orders for this unit for this impulse
       $impulse = $unit->read( $time );
+
       # skip if nothing happened on this impulse from this unit
       if( ! $impulse )
         continue;
+
       # go through each order for this unit
       foreach( $impulse as $key=>$value )
       {
@@ -172,11 +174,17 @@ class LogFile
           case "esg":
             $phase = self::SEQUENCE_ESGS;
             break;
+          case "dis dev":
+            $phase = self::SEQUENCE_DIS_DEV_DECLARATION;
+            break;
           case "drone":
             $phase = self::SEQUENCE_LAUNCH_DRONES;
             break;
           case "plasma":
             $phase = self::SEQUENCE_LAUNCH_PLASMA;
+            break;
+          case "ppd":
+            $phase = self::SEQUENCE_FIRE_DECLARATION;
             break;
           case "ship":
             $phase = self::SEQUENCE_MOVEMENT_SHIPS;
@@ -188,26 +196,52 @@ class LogFile
             $phase = self::SEQUENCE_CAST_WEB;
             break;
           }
-          if( ! is_array($value) )
-            $value = array( $value );
-          $value["owner"] = $unit->name;
           if( ! isset($output[ $phase ]) || ! is_array($output[ $phase ]) )
-            $output[ $phase ] = array( $value );
-          else
-            $output[ $phase ][] = $value;
+            $output[ $phase ] = array();
+          $output[ $phase ][] = $value;
+
           break;
         case "damage":
           $phase = self::SEQUENCE_DAMAGE_ALLOCATION;
-          $value ["owner"] = $unit->name;
+
           if( ! isset($output[ $phase ]) || ! is_array($output[ $phase ]) )
-            $output[ $phase ] = array( $value );
-          else
-            $output[ $phase ][] = $value;
+            $output[ $phase ] = array();
+          # capture the second dimension arrays as the output
+          foreach( $value as $out )
+            $output[ $phase ][] = $out;
+
           break;
         case "facing":
         case "location":
-          if( $unit->getCurrentSpeed( $time ) === 0 )
+          # place units that are added
+          if( isset($value[1]) && ( $value[1] == "Launch" || $value[1] == "Add" ) )
+          {
+            switch( $unit->basicType )
+            {
+            case "esg":
+              $phase = self::SEQUENCE_ESGS;
+              break;
+            case "drone":
+              $phase = self::SEQUENCE_LAUNCH_DRONES;
+              break;
+            case "plasma":
+              $phase = self::SEQUENCE_LAUNCH_PLASMA;
+              break;
+            case "ship":
+              $phase = self::SEQUENCE_MOVEMENT_SHIPS;
+              break;
+            case "shuttle":
+              $phase = self::SEQUENCE_LAUNCH_SHUTTLES;
+              break;
+            case "web":
+              $phase = self::SEQUENCE_CAST_WEB;
+              break;
+            }
+          }
+          # move TACcing units
+          else if( $unit->getCurrentSpeed( $time ) === 0 )
             $phase = self::SEQUENCE_MOVEMENT_TAC;
+          # move everything else
           else
             switch( $unit->basicType )
             {
@@ -222,61 +256,75 @@ class LogFile
               $phase = self::SEQUENCE_MOVEMENT_SEEKERS;
               break;
             }
-          if( ! is_array($value) )
-            $value = array( $value );
-          $value["owner"] = $unit->name;
+
           if( ! isset($output[ $phase ]) || ! is_array($output[ $phase ]) )
             $output[ $phase ] = array();
-
-          # fix double-posting: once for facing, once for location
-          if( in_array( $value, $output[ $phase ] ) )
-            break;
-
           $output[ $phase ][] = $value;
+
           break;
         case "fire":
           $phase = self::SEQUENCE_FIRE_DECLARATION;
-          $value ["owner"] = $unit->name;
+
           if( ! isset($output[ $phase ]) || ! is_array($output[ $phase ]) )
-            $output[ $phase ] = array( $value );
-          else
-            $output[ $phase ][] = $value;
+            $output[ $phase ] = array();
+          # capture the second dimension arrays as the output
+          foreach( $value as $out )
+            $output[ $phase ][] = $out;
+
           break;
         case "speed":
           $phase = self::SEQUENCE_SPEED_CHANGES;
-          $value = array( $value, "owner"=>$unit->name );
+
           if( ! isset($output[ $phase ]) || ! is_array($output[ $phase ]) )
-            $output[ $phase ] = array( $value );
-          else
-            $output[ $phase ][] = $value;
+            $output[ $phase ] = array();
+          $output[ $phase ][] = $value;
+
           break;
         case "remove":
-          $phase = self::SEQUENCE_IMPULSE_END;
-          $value = array( $value, "owner"=>$unit->name );
+          switch( $unit->basicType )
+          {
+          case "dis dev":
+            $phase = self::SEQUENCE_DIS_DEV_DECLARATION;
+            break;
+          case "esg":
+            $phase = self::SEQUENCE_ESGS;
+            break;
+          case "ppd":
+            $phase = self::SEQUENCE_PPDS;
+            break;
+          case "web":
+            $phase = self::SEQUENCE_CAST_WEB;
+            break;
+          case "drone":
+          case "plasma":
+          case "ship":
+          case "shuttle":
+          default:
+            $phase = self::SEQUENCE_IMPULSE_END;
+            break;
+          }
+
           if( ! isset($output[ $phase ]) || ! is_array($output[ $phase ]) )
-            $output[ $phase ] = array( $value );
-          else
-            $output[ $phase ][] = $value;
+            $output[ $phase ] = array();
+          $output[ $phase ][] = $value;
+
           break;
         case "tractordown":
         case "tractorup":
           $phase = self::SEQUENCE_TRACTORS;
-          $value ["owner"] = $unit->name;
+
           if( ! isset($output[ $phase ]) || ! is_array($output[ $phase ]) )
-            $output[ $phase ] = array( $value );
-          else
-            $output[ $phase ][] = $value;
+            $output[ $phase ] = array();
+          $output[ $phase ][] = $value;
+
           break;
         default:
           $phase = 99;
-          if( is_array($value) )
-            $value ["owner"] = $unit->name;
-          else
-            $value = array( $value, "owner"=>$unit->name );
+
           if( ! isset($output[ $phase ]) || ! is_array($output[ $phase ]) )
-            $output[ $phase ] = array( $value );
-          else
-            $output[ $phase ][] = $value;
+            $output[ $phase ] = array();
+          $output[ $phase ][] = $value;
+
           break;
         }
       }
