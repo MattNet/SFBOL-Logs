@@ -2,16 +2,27 @@
 ###
 # Provides the methods to access a unit from an SFB-online log file
 ###
-# create( $log, $time )
-# - Populates itself from the provided log. This is a large string, as if from file_get_contents()
-# read( $impulse )
-# - Returns an array of each item that occurs during the given turn.impulse
+# __construct( $log, $offset=0 )
+# - Extracts the information for the first unit found that is added
+# read( $time )
+# - Shows all items from a certain impulse
 # readAll()
-# - Returns an array of every item that this unit performed
-# convertToImp( $time )
+# - Shows all impulse items
+# removeAction( $time, $action )
+# - Removes the action at $time impulses.
+# getCurrentSpeed( $time )
+# - retrieves the speed of the unit for the current impulse
+# isHetTac( $new_facing, $old_facing, $speed )
+# - Determines if a facing change is a HET or a TAC
+# (static) function convertToImp( $time )
 # - Converts the 'turn.impulse' notation to number of impulses
-# convertFromImp( $time )
+# (static) convertFromImp( $time )
 # - Converts from number of impulses to the 'turn.impulse' notation
+# (static) convertToTurn( $time )
+# - splits the 'turn.impulse' notation to turn and impulse
+# (static) get_basic_type( $type )
+# - Determines the basic unit type from the specific unit type
+# - e.g. "LDR TCWL" is a basic type "ship"
 ###
 
 
@@ -74,7 +85,7 @@ class LogUnit
       {
         $this->pointerTime = self::convertToImp( $matches[1] );
         if( $this->pointerTime === null )
-          $this->error .= "Impulse conversion in the wrong format. Given '{$matches[1]}'.";
+          $this->error .= "Impulse conversion in the wrong format. Given '{$matches[1]}',  Unit '".$this->name."'.";
         continue; # Go to next line if the FRAMEREGEX matched
       }
 
@@ -84,17 +95,22 @@ class LogUnit
         continue;
 
   # ADDREGEX
+  # Note that a Re-Sync can remove, then add a unit on the same impulse
       $status = preg_match( $this->ADDREGEX, $line, $matches );
-      if( $status == 1 )
+      # If the pregex matched and if we have not already defined this object
+      if( $status == 1 && $this->type == "" )
       {
-        if( $this->type != "" )
-          continue; # skip adding more if we have already defined this object
-        list( , $this->name, $this->type, $location ) = $matches;
+        # check if this is a new unit or simply a new location
+        if( $this->type == "" )
+          # New unit. Name and type are unknown until now
+          list( , $this->name, $this->type, $location ) = $matches;
+        else
+          list( , , , $location ) = $matches;
 
         # fill out the object and tag information
         $this->added = $this->pointerTime;
         $this->basicType = self::get_basic_type( $this->type );
-        $output = array( "facing"=>"A", "location"=>$location, "speed"=>0, "type"=>$this->type, "owner"=>$this->name );
+        $output = array( "Add"=>$this->pointerTime, "facing"=>"A", "location"=>$location, "speed"=>0, "type"=>$this->type, "owner"=>$this->name );
         if( isset($matches[4]) )
           $output["facing"] = $matches[4];
         if( isset($matches[5]) )
@@ -120,7 +136,7 @@ class LogUnit
           $damage = intval($matches[7]); # pull the total damage from the second line
         else
         {
-          $this->error .= "Damage announcement line without subsequent allocation. Line ".($lineNum+1)."\n";
+          $this->error .= "Damage announcement line without subsequent allocation. Unit '".$this->name."', Line ".($lineNum+1)."\n";
           continue;
         }
         # get the total reinforcement from the third line
@@ -129,7 +145,7 @@ class LogUnit
           $reinforcement = intval($matches[1]+$matches[2]+$matches[3]+$matches[4]+$matches[5]+$matches[6]);
         else
         {
-          $this->error .= "Damage announcement line without subsequent reinforcement allocation. Line ".($lineNum+2)."\n";
+          $this->error .= "Damage announcement line without subsequent reinforcement allocation. Unit '".$this->name."', Line ".($lineNum+2)."\n";
           continue;
         }
         # get the internals from the fifth line (if applicable)
@@ -197,6 +213,7 @@ class LogUnit
         continue; # Go to next line if the LOCATIONREGEX matched
       }
   # REMOVEREGEX
+  # Note that a Re-Sync can remove, then add a unit on the same impulse
       $status = preg_match( $this->REMOVEREGEX, $line, $matches );
       if( $status == 1 && $matches[1] == $this->name )
       {
@@ -231,7 +248,7 @@ class LogUnit
       if( $status == 1 && $matches[1] == $this->name )
       {
         # fill out the tag information
-        $output = array( "owner"=>$this->name, "target"=>$matches[2] );
+        $output = array( "owner"=>$this->name, "target"=>$matches[2], "tractordown"=>$this->pointerTime );
 
         # add the tag information to the impulse
         if( ! isset($this->impulses[ $this->pointerTime ]) )
@@ -245,7 +262,7 @@ class LogUnit
       if( $status == 1 && $matches[1] == $this->name )
       {
         # fill out the tag information
-        $output = array( "owner"=>$this->name, "target"=>$matches[2] );
+        $output = array( "owner"=>$this->name, "target"=>$matches[2], "tractorup"=>$this->pointerTime );
 
         # add the tag information to the impulse
         if( ! isset($this->impulses[ $this->pointerTime ]) )
@@ -259,9 +276,9 @@ class LogUnit
       if( $status == 1 && $matches[1] == $this->name )
       {
         list( , , $wpn, $wpnID, $arc, $target ) = $matches;
-
+        $range = end($matches); # optionally, the firing mode of the weapon preceeds the range entry
         # fill out the object and tag information
-        $output = array( "arc"=>$arc, "id"=>$wpnID, "owner"=>$this->name, "target"=>$target, "weapon"=>$wpn );
+        $output = array( "arc"=>$arc, "id"=>$wpnID, "owner"=>$this->name, "range"=>$range, "target"=>$target, "weapon"=>$wpn );
 
         # Add to $this->weapons
         $stuffer = array( "arc"=>$arc, "id"=>$wpnID, "weapon"=>$wpn );
@@ -277,7 +294,7 @@ class LogUnit
         continue; # Go to next line if the WEAPONREGEX matched
       }
     }
-    # if we never saw a "removed" statement for this unit, thne set "removed" to the last impulse
+    # if we never saw a "removed" statement for this unit, then set "removed" to the last impulse
     if( $this->removed == 0 )
       $this->removed = $this->pointerTime;
   }
@@ -295,19 +312,19 @@ class LogUnit
     $time = self::convertToImp( $time );
     if( $time === null )
     {
-      $this->error .= "Invalid time format in read(). Given '$time'.\n";
+      $this->error .= "Invalid time format in read(). Given '$time', Unit '".$this->name."'.\n";
       return NULL;
     }
     if( ! isset($this->impulses[$time]) )
     {
-      $this->error .= "Time given to read() is not recorded in the log file.\n";
+      $this->error .= "Time given to read() is not recorded in the log file: Unit '".$this->name."', Turn ".self::convertFromImp($time)."\n";
       return NULL;
     }
     return $this->impulses[$time];
   }
 
   ###
-  # Shows all impulse items
+  # Shows all impulse segment items
   ###
   # Args are:
   # - None
@@ -317,6 +334,46 @@ class LogUnit
   function readAll()
   {
     return $this->impulses;
+  }
+
+  ###
+  # Removes the action at $time impulses
+  ###
+  # Args are:
+  # - (string) The time to examine, in 'impulse' notation
+  # - (string) The action to remove
+  # Returns:
+  # - (boolean) True for success
+  ###
+  function removeAction( $time, $action )
+  {
+    # sanitize the $time input
+    $time = self::convertToImp( $time );
+    if( $time === null )
+    {
+      $this->error .= "Invalid time format in removeAction(). Given '$time', Unit '".$this->name."'.\n";
+      return false;
+    }
+    if( ! isset($this->impulses[$time]) )
+    {
+      $this->error .= "Time given to removeAction() is not recorded in the log file: Unit '".$this->name."', Turn ".self::convertFromImp($time)."\n";
+      return false;
+    }
+
+    # sanitize the $action input
+    if( ! isset($this->impulses[$time][$action]) )
+    {
+      $this->error .= "Action given to removeAction() does not exist at $time. Unit '".$this->name."'\n";
+      return false;
+    }
+
+    # erase the action
+    unset($this->impulses[$time][$action]);
+    # if the impulse is empty, remove the impulse entry
+    if( empty($this->impulses[$time]) )
+      unset($this->impulses[$time]);
+
+    return true;
   }
 
   ###
@@ -333,12 +390,12 @@ class LogUnit
     $time = self::convertToImp( $time );
     if( $time === null )
     {
-      $this->error .= "Invalid time format in read(). Given '$time'.\n";
+      $this->error .= "Invalid time format in read(). Given '$time', Unit '".$this->name."'.\n";
       return NULL;
     }
     if( ! isset($this->impulses[$time]) )
     {
-      $this->error .= "Time given to getCurrentSpeed() is not recorded in the log file.\n";
+      $this->error .= "Time given to getCurrentSpeed() is not recorded in the log file: Unit '".$this->name."', Turn ".self::convertFromImp($time)."\n";
       return NULL;
     }
     $input = $this->readAll();
@@ -430,6 +487,21 @@ class LogUnit
       $turns -= 1;
     }      
     return "$turns.$imps";
+  }
+  ###
+  # splits the 'turn.impulse' notation to turn and impulse
+  ###
+  # Args are:
+  # - (string) The time, in 'turn.impulses' notation
+  # Returns:
+  # - (int) The number of turns that have occurred
+  # - (int) The number of impulses that have occurred
+  ###
+  static function convertToTurn( $time )
+  {
+    if( ! str_contains( $time, "." ) )
+      $time = convertFromImp( $time );
+    return explode( ".", $time );
   }
   ###
   # Determines the basic unit type from the specific unit type
