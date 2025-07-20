@@ -18,13 +18,16 @@ This assumes that the python script will be run in a blender file that contains:
 ****/
 
 ###
-# Unit type (in the logs) to Model name (in blender) conversion
+# Lookup table for unit-type (per the log file) to named Blender model
+# e.g. "Gozilla (Type:Gorn TCC) has been added at ..."
+#                ^^^^^^^^^^^^^
 ###
 define( 'MODEL_NAME', array(
 # Ships
   'Andromedan Krait (Official)' => 'Andromedan KRA',
   'Archeo-Tholian TCC' => 'Tholian ATC',
   'Fed TCC (G-Rack) (Playtest)' => 'Federation TCA',
+  'Fed TCC (Official' => 'Federation TCA',
   'Frax TC (Playtest)' => 'Frax TCA',
   'Gorn TCC' => 'Gorn TCA',
   'Hydran TLM' => 'Hydran TCC',
@@ -37,6 +40,7 @@ define( 'MODEL_NAME', array(
   'Romulan TFH' => 'Romulan TFH',
   'Romulan TKE' => 'Romulan TKE',
   'Romulan TKR' => 'Romulan TKR',
+  'Seltorian TCA' => 'Seltorian TCA',
   'Vudar TCA' => 'Vudar TCA',
   'Wyn GBS' => 'WYN GBS',
   'Wyn TAxBC' => 'WYN AuxBCT',
@@ -44,35 +48,35 @@ define( 'MODEL_NAME', array(
   'Andromedan Mine' => 'Mine',
   'Archeo-Tholian Web' => 'Web',
   'Archeo-Tholian Shuttle' => 'Shuttle',
-  'Federation Drone' => 'Drone',
-  'Federation Shuttle' => 'Shuttle',
+  'Fed Drone' => 'Drone',
+  'Fed Shuttle' => 'Federation Shuttle',
   'Frax Drone' => 'Drone',
-  'Frax Shuttle' => 'Shuttle',
+  'Frax Shuttle' => 'Federation Shuttle',
   'Gorn Plasma' => 'Plasma',
-  'Gorn Shuttle' => 'Shuttle',
+  'Gorn Shuttle' => 'Federation Shuttle',
   'Hydran Fighter' => '',
-  'Hydran Shuttle' => 'Shuttle',
+  'Hydran Shuttle' => 'Federation Shuttle',
   'ISC Plasma' => 'Plasma',
-  'ISC Shuttle' => 'Shuttle',
+  'ISC Shuttle' => 'Federation Shuttle',
   'Klingon Drone' => 'Drone',
-  'Klingon Shuttle' => 'Shuttle',
+  'Klingon Shuttle' => 'Federation Shuttle',
   'LDR ESG' => 'ESG',
-  'LDR Shuttle' => 'Shuttle',
+  'LDR Shuttle' => 'Federation Shuttle',
   'Lyran ESG' => 'ESG',
-  'Lyran Shuttle' => 'Shuttle',
+  'Lyran Shuttle' => 'Federation Shuttle',
   'Orion Drone' => 'Drone',
   'Orion ESG' => 'ESG',
   'Orion Plasma' => 'Plasma',
-  'Orion Shuttle' => 'Shuttle',
+  'Orion Shuttle' => 'Federation Shuttle',
   'TFE Plasma' => 'Plasma',
   'TKE Plasma' => 'Plasma',
   'TKR Plasma' => 'Plasma',
-  'Romulan Shuttle' => 'Shuttle',
-  'Vudar Shuttle' => 'Shuttle',
-  'WYN Drone' => 'Drone',
+  'Romulan Shuttle' => 'Federation Shuttle',
+  'Vudar Shuttle' => 'Federation Shuttle',
+  'Wyn TAxBC Drone' => 'Drone',
   'WYN ESG' => 'ESG',
   'WYN Plasma' => 'Plasma',
-  'WYN Shuttle' => 'Shuttle',
+  'Wyn TAxBC Shuttle' => 'Federation Shuttle',
 # Misc
   'Andromedan DisDev' => '',
   'Card' => 'Card',
@@ -182,11 +186,10 @@ $unitCache = $log->get_units();
 foreach( $unitCache as &$entry )
 {
   $entry["blender"] = "bpy.data.objects['".$entry["name"]."']";
-  $ShipsFacings[ $entry["name"] ] = "A";
+  $ShipsFacings[ $entry["name"] ] = "D"; // This is the model's initial facing. 'A' is pointing in the +Y direction
 
   # Set $unitList to $unitCache, but indicies are the unit name
   $unitList[ $entry["name"] ] = $entry;
-
 
   # update $LastLine
   if( $LastLine < $entry["removed"] )
@@ -217,7 +220,7 @@ for( $i=0; $i<$LastLine; $i++ )
 
   $output .= "\n# Start of impulse ".LogUnit::convertFromImp( $i ).", animation frame $frame\n\n";
 
-  $output .= impulse_display( $i );
+//  $output .= impulse_display( $i );
 
   # skip if nothing happened here
   if( empty($impulseActivity) )
@@ -284,6 +287,7 @@ for( $i=0; $i<$LastLine; $i++ )
           $XLoc = ( ($X * $XHEXSIZE) + $XOFFSET - $XHEXSIZE);
           $YLoc = ( ($Y * $YHEXSIZE) + $YOFFSET - $YHEXSIZE + $hexVertBump);
 
+          # Set the initial rotation/location
           $rot = rotation($ShipsFacings[ $action["owner"] ], $action["facing"]);
           $output .= keyframe_move( $unitList[ $action["owner"] ]["blender"], $XLoc, $YLoc, $rot, true );
           $ShipsFacings[ $action["owner"] ] = $action["facing"];
@@ -477,9 +481,9 @@ function card_set( $msg, $X, $Y, $time, $Z="3.0" )
 
   # Duplicate and select the card
   $cardName = MODEL_NAME["Card"];
-  $cardObject = "bpy.data.objects[$cardName]\n";
+  $cardObject = "bpy.data.objects[\"$cardName\"]";
   $out .= "$cardObject.select_set(True)\nbpy.context.view_layer.objects.active = $cardObject\n";
-  $out .= "obj = bpy.data.objects['$cardName'].copy()\n";
+  $out .= "obj = bpy.data.objects[\"$cardName\"].copy()\n";
   $out .= "bpy.context.collection.objects.link(obj)\n";
 
   # set the message
@@ -491,7 +495,7 @@ function card_set( $msg, $X, $Y, $time, $Z="3.0" )
   # set the new location
   $out .= "obj.location = ($X, $Y, $Z)\n";
   $out .= "obj.keyframe_insert(data_path=\"location\", frame=$frame)\n";
-  # remove after $FRAMESFORMOVE
+  # remove after $time
   $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $frame + $time ).")\n";
   $out .= "obj.location = ($offMapLocation)\n";
   $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $frame + $time + 1 ).")\n\n";
@@ -523,12 +527,12 @@ function impulse_display( $time )
   $out = "# Display \"T".$turn."i".$impulse."\" at camera.\n";
   # select the impulse card
   $cardName = MODEL_NAME["CamCard"];
-  $cardObject = "bpy.data.objects[$cardName]\n";
+  $cardObject = "bpy.data.objects[\"$cardName\"]";
   $out .= "$cardObject.select_set(True)\nbpy.context.view_layer.objects.active = $cardObject\n";
 
   # set the message
-  $out .= "obj.modifiers[\"GeometryNodes\"][\"Socket_2\"] = \"T".$turn."i".$impulse."\"\n";
-  $out .= "obj.data.update()\n\n";
+  $out .= "$cardObject.modifiers[\"GeometryNodes\"][\"Socket_2\"] = \"T".$turn."i".$impulse."\"\n";
+  $out .= "$cardObject.data.update()\n\n";
 
   return $out;
 }
