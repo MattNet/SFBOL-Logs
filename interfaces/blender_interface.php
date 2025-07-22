@@ -211,7 +211,7 @@ $log->read( LogUnit::convertFromImp( 25 ) );
 $output .= "bpy.context.scene.frame_end = ".(($LastLine+1)*($FRAMESPERACTION*2+$FRAMESFORMOVE))."\n";
 $output .= "bpy.context.scene.frame_set(0)\n";
 
-# go through each line of the input file
+# go through each impulse
 for( $i=0; $i<$LastLine; $i++ )
 {
 # Get the activity for this impulse
@@ -256,11 +256,12 @@ for( $i=0; $i<$LastLine; $i++ )
         else if( $ShipsFacings[ $action["owner"] ] != $action["facing"] )
         {
           $rot = rotation($ShipsFacings[ $action["owner"] ], $action["facing"]);
-          $output .= keyframe_move( $unitList[ $action["owner"] ]["blender"], $XLoc, $YLoc, $rot );
+          $output .= keyframe_move( $unitList[ $action["owner"] ]["blender"], null, null, $rot );
           $ShipsFacings[ $action["owner"] ] = $action["facing"];
 
           # Add a Card to decribe TAC or HET
-          $output .= card_set( $action["turn"], $XLoc, $YLoc, $FRAMESFORMOVE );
+          if( isset($action["turn"]) && ( $action["turn"] == "TAC" || $action["turn"] == "HET" ))
+            $output .= card_set( $action["turn"], $XLoc, $YLoc, $frame, $FRAMESFORMOVE );
         }
       }
     }
@@ -278,6 +279,7 @@ for( $i=0; $i<$LastLine; $i++ )
             $sequence == LogFile::SEQUENCE_LAUNCH_SHUTTLES
           )
         {
+          $output .= "# Launch/land ".$unitList[ $action["owner"] ]["basic"]."\n";
           $hexVertBump = 0;
           $X = substr( $action["location"], 0, 2 );
           $Y = substr( $action["location"], 2, 2 );
@@ -293,7 +295,7 @@ for( $i=0; $i<$LastLine; $i++ )
           $ShipsFacings[ $action["owner"] ] = $action["facing"];
 
           # Announce the action
-          $output .= card_set( "Launch ".$unitList[ $action["owner"] ]["basic"], $XLoc, $YLoc, $FRAMESPERACTION );
+          $output .= card_set( $unitList[ $action["owner"] ]["basic"]." Launch", $XLoc, $YLoc, $frame+$FRAMESFORMOVE, $FRAMESPERACTION );
          }
       # if we are tractoring a unit
         if( $sequence == LogFile::SEQUENCE_TRACTORS )
@@ -303,7 +305,7 @@ for( $i=0; $i<$LastLine; $i++ )
         if( $sequence == LogFile::SEQUENCE_CLOAKING_DEVICE )
         {
           # Announce the action
-          $output .= card_set( "Cloak", $XLoc, $YLoc, $FRAMESPERACTION );
+          $output .= card_set( "Cloak", $XLoc, $YLoc, $frame+$FRAMESFORMOVE, $FRAMESPERACTION );
         }
       }
     }
@@ -380,15 +382,15 @@ function rotation( $old, $new )
 ###
 # Args are:
 # - (string) The blender object name of the unit being moved
-# - (int) The X-location to move to, in blender units
-# - (int) The Y-location to move to, in blender units
-# - (int) [optional] The degrees of rotation for the unit. '+' is clockwise, '-' is CCW
+# - (float) The X-location to move to, in blender units
+# - (float) The Y-location to move to, in blender units
+# - (float) [optional] The degrees of rotation for the unit. '+' is clockwise, '-' is CCW
 # - (boolean) [optional] Should the unit move to the new location without animation?
-# - (int) [optional] The Z-location to move to, in blender units
+# - (float) [optional] The Z-location to move to, in blender units
 # Returns:
 # - (string) The python code to affect the move and turn
 ###
-function keyframe_move( $unit, $X, $Y, $rotation="", $suddenMove=FALSE, $Z="0.0" )
+function keyframe_move( $unit, $X=null, $Y=null, $rotation="", $suddenMove=FALSE, $Z="0.0" )
 {
   global $frame, $FRAMESFORMOVE;
   $out = "";
@@ -458,7 +460,7 @@ function keyframe_move( $unit, $X, $Y, $rotation="", $suddenMove=FALSE, $Z="0.0"
     }
   }
 
-  return $out;
+  return $out."\n";
 }
 
 ###
@@ -473,15 +475,15 @@ function keyframe_move( $unit, $X, $Y, $rotation="", $suddenMove=FALSE, $Z="0.0"
 # Returns:
 # - (string) The python code to affect the move and turn
 ###
-function card_set( $msg, $X, $Y, $time, $Z="3.0" )
+function card_set( $msg, $X, $Y, $time, $duration, $Z="3.0" )
 {
-  global $frame;
   $offMapLocation = "0, 0, -8"; # Where to put the card when done
   $out = "";
 
   # Duplicate and select the card
   $cardName = MODEL_NAME["Card"];
   $cardObject = "bpy.data.objects[\"$cardName\"]";
+  $out .=  "# Add speech bubble '$msg'\n";
   $out .= "$cardObject.select_set(True)\nbpy.context.view_layer.objects.active = $cardObject\n";
   $out .= "obj = bpy.data.objects[\"$cardName\"].copy()\n";
   $out .= "bpy.context.collection.objects.link(obj)\n";
@@ -489,16 +491,15 @@ function card_set( $msg, $X, $Y, $time, $Z="3.0" )
   # set the message
   $out .= "obj.modifiers[\"GeometryNodes\"][\"Socket_2\"] = \"$msg\"\n";
   $out .= "obj.data.update()\n";
-
   # Move the new card
-  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".($frame-1).")\n";
+  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".($time-1).")\n";
   # set the new location
   $out .= "obj.location = ($X, $Y, $Z)\n";
-  $out .= "obj.keyframe_insert(data_path=\"location\", frame=$frame)\n";
+  $out .= "obj.keyframe_insert(data_path=\"location\", frame=$time)\n";
   # remove after $time
-  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $frame + $time ).")\n";
+  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $time + $duration ).")\n";
   $out .= "obj.location = ($offMapLocation)\n";
-  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $frame + $time + 1 ).")\n\n";
+  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $time + $duration + 1 ).")\n\n";
 
   return $out;
 }
