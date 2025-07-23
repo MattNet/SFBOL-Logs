@@ -206,17 +206,14 @@ foreach( $unitCache as &$entry )
 
 $log->read( LogUnit::convertFromImp( 25 ) );
 
-# set the length of the animation
-# This is assuredly too large if $NOANIMATION is true
-$output .= "bpy.context.scene.frame_end = ".(($LastLine+1)*($FRAMESPERACTION*2+$FRAMESFORMOVE))."\n";
-$output .= "bpy.context.scene.frame_set(0)\n";
-
 # go through each impulse
 for( $i=0; $i<$LastLine; $i++ )
 {
 # Get the activity for this impulse
   $impulseActivity = $log->read( LogUnit::convertFromImp( $i ) );
-  $frame = $i * ($FRAMESPERACTION * 2 + $FRAMESFORMOVE);
+//  $frame = $i * ($FRAMESPERACTION * 2 + $FRAMESFORMOVE);
+  $frame = $frameIncrement;
+  $flagWasActivity = false;
 
   $output .= "\n# Start of impulse ".LogUnit::convertFromImp( $i ).", animation frame $frame\n\n";
 
@@ -296,24 +293,34 @@ for( $i=0; $i<$LastLine; $i++ )
 
           # Announce the action
           $output .= card_set( $unitList[ $action["owner"] ]["basic"]." Launch", $XLoc, $YLoc, $frame+$FRAMESFORMOVE, $FRAMESPERACTION );
+
+          # Flag that we impulse activity
+          $flagWasActivity = true;
          }
       # if we are tractoring a unit
         if( $sequence == LogFile::SEQUENCE_TRACTORS )
         {
+          # Flag that we impulse activity
+          $flagWasActivity = true;
         }
       # if we are cloaking a unit
         if( $sequence == LogFile::SEQUENCE_CLOAKING_DEVICE )
         {
           # Announce the action
           $output .= card_set( "Cloak", $XLoc, $YLoc, $frame+$FRAMESFORMOVE, $FRAMESPERACTION );
+
+          # Flag that we impulse activity
+          $flagWasActivity = true;
         }
       }
     }
 # Firing
     else if( $sequence < LogFile::SEQUENCE_IMPULSE_END )
     {
-      foreach( $actionSet as $action )
+//      foreach( $actionSet as $action )
       {
+          # Flag that we impulse activity
+          $flagWasActivity = true;
       }
     }
 # End of impulse
@@ -329,14 +336,21 @@ for( $i=0; $i<$LastLine; $i++ )
     }
   }
   $frameIncrement += $FRAMESFORMOVE; # Every movement segment is tracked
-  if( $flagWasActivity )
+  if( $flagWasActivity || $NOANIMATION == false )
     $frameIncrement += ( 2 * $FRAMESPERACTION ); # Track impulse activity if there was some
 }
 
+# set the length of the animation
+# This is assuredly too large if $NOANIMATION is true
+//$output .= "bpy.context.scene.frame_end = ".(($LastLine+1)*$frameIncrement)."\n";
+$output .= "bpy.context.scene.frame_end = $frameIncrement\n";
+$output .= "bpy.context.scene.frame_set(0)\n";
+
 echo "###\nDebug Info:\n###\n";
-echo "Animation length: ".(($LastLine+1)*($FRAMESPERACTION*2+$FRAMESFORMOVE))." frames\n";
+//echo "Animation length: ".(($LastLine+1)*($FRAMESPERACTION*2+$FRAMESFORMOVE))." frames\n";
+echo "Animation length: $frameIncrement frames\n";
 echo "Unit List:\n";
-print_r( $unitList );
+//print_r( $unitList );
 echo "\n";
 
 # write the new file
