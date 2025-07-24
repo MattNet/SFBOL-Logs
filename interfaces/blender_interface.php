@@ -97,10 +97,12 @@ $YOFFSET = 0;
 $CLIoptions = "";
 $CLIoptions .= "a::"; // adjust action animation time
 $CLIoptions .= "m::"; // adjust move animation time
+$CLIoptions .= "q"; // quiet the command line
 $CLIoptions .= "x"; // remove action time for impulses without it
 $CLIlong = array(
   "action::",
   "move::",
+  "quiet",
   "no_action",
 );
 
@@ -202,6 +204,7 @@ foreach( $unitCache as &$entry )
   $output .= "obj = bpy.data.objects['$active_object'].copy()\n";
   $output .= "bpy.context.collection.objects.link(obj)\n";
   $output .= "obj.name = '".$entry["name"]."'\n";
+  $output .= "obj.hide_render = False\n";
 }
 
 $log->read( LogUnit::convertFromImp( 25 ) );
@@ -276,7 +279,6 @@ for( $i=0; $i<$LastLine; $i++ )
             $sequence == LogFile::SEQUENCE_LAUNCH_SHUTTLES
           )
         {
-          $output .= "# Launch/land ".$unitList[ $action["owner"] ]["basic"]."\n";
           $hexVertBump = 0;
           $X = substr( $action["location"], 0, 2 );
           $Y = substr( $action["location"], 2, 2 );
@@ -286,9 +288,11 @@ for( $i=0; $i<$LastLine; $i++ )
           $XLoc = ( ($X * $XHEXSIZE) + $XOFFSET - $XHEXSIZE);
           $YLoc = ( ($Y * $YHEXSIZE) + $YOFFSET - $YHEXSIZE + $hexVertBump);
 
+          $output .= "# Launch/land ".$unitList[ $action["owner"] ]["basic"]."\n";
+
           # Set the initial rotation/location
           $rot = rotation($ShipsFacings[ $action["owner"] ], $action["facing"]);
-          $output .= keyframe_move( $unitList[ $action["owner"] ]["blender"], $XLoc, $YLoc, $rot, true );
+          $output .= keyframe_move( $unitList[ $action["owner"] ]["blender"], $XLoc, $YLoc, $rot, $FRAMESFORMOVE, true );
           $ShipsFacings[ $action["owner"] ] = $action["facing"];
 
           # Announce the action
@@ -330,13 +334,17 @@ for( $i=0; $i<$LastLine; $i++ )
       {
         # "remove" the unit (move off the map)
         $rot = rotation($ShipsFacings[ $action["owner"] ], "A");
-        $output .= keyframe_move( $unitList[ $action["owner"] ]["blender"], $XLoc, $YLoc, $rot, true, "-10.0" );
+        $output .= keyframe_move( $unitList[ $action["owner"] ]["blender"], $XLoc, $YLoc, $rot, $FRAMESFORMOVE + (2 * $FRAMESPERACTION), true, "-10.0" );
         $ShipsFacings[ $action["owner"] ] = "A";
+
+        # Flag that we impulse activity
+        $flagWasActivity = true;
       }
     }
   }
+
   $frameIncrement += $FRAMESFORMOVE; # Every movement segment is tracked
-  if( $flagWasActivity || $NOANIMATION == false )
+  if( $flagWasActivity || ! $NOANIMATION )
     $frameIncrement += ( 2 * $FRAMESPERACTION ); # Track impulse activity if there was some
 }
 
@@ -346,17 +354,26 @@ for( $i=0; $i<$LastLine; $i++ )
 $output .= "bpy.context.scene.frame_end = $frameIncrement\n";
 $output .= "bpy.context.scene.frame_set(0)\n";
 
-echo "###\nDebug Info:\n###\n";
-//echo "Animation length: ".(($LastLine+1)*($FRAMESPERACTION*2+$FRAMESFORMOVE))." frames\n";
-echo "Animation length: $frameIncrement frames\n";
-echo "Unit List:\n";
-//print_r( $unitList );
-echo "\n";
+
+if( ! isset($CLI["q"]) && ! isset($CLI["quiet"]) )
+{
+  echo "###\nDebug Info:\n###\n";
+//  echo "Animation length: ".(($LastLine+1)*($FRAMESPERACTION*2+$FRAMESFORMOVE))." frames\n";
+  echo "Animation length: $frameIncrement frames\n";
+  echo "Unit List:\n";
+  print_r( $unitList );
+  echo "\n";
+}
 
 # write the new file
 $status = file_put_contents( $writeFile, $output );
 if( ! $status )
+{
   echo "Failed write of '$writeFile'\n\n";
+  exit(1);
+}
+
+exit(0);
 
 ####
 # Function Declarations
@@ -399,12 +416,13 @@ function rotation( $old, $new )
 # - (float) The X-location to move to, in blender units
 # - (float) The Y-location to move to, in blender units
 # - (float) [optional] The degrees of rotation for the unit. '+' is clockwise, '-' is CCW
+# - (int) [optional] Amount of frames to delay.
 # - (boolean) [optional] Should the unit move to the new location without animation?
 # - (float) [optional] The Z-location to move to, in blender units
 # Returns:
 # - (string) The python code to affect the move and turn
 ###
-function keyframe_move( $unit, $X=null, $Y=null, $rotation="", $suddenMove=FALSE, $Z="0.0" )
+function keyframe_move( $unit, $X=null, $Y=null, $rotation="", $delay=0, $suddenMove=FALSE, $Z="0.0" )
 {
   global $frame, $FRAMESFORMOVE;
   $out = "";
@@ -438,20 +456,20 @@ function keyframe_move( $unit, $X=null, $Y=null, $rotation="", $suddenMove=FALSE
     if( isset($X) && isset($Y) ) # do if movement is not missing
     {
       # post this at the end of movement.
-      $out .= "$unit.keyframe_insert(data_path=\"location\", frame=".($frame+$FRAMESFORMOVE-1).")\n";
+      $out .= "$unit.keyframe_insert(data_path=\"location\", frame=".($frame+$delay-1).")\n";
       # set the location of the new impulse
       $out .= "$unit.location = ($X, $Y, $Z)\n";
-      $out .= "$unit.keyframe_insert(data_path=\"location\", frame=".($frame+$FRAMESFORMOVE).")\n";
+      $out .= "$unit.keyframe_insert(data_path=\"location\", frame=".($frame+$delay).")\n";
     }
     # set the original rotation to the frame before movement starts
     if( $rotation != "" ) # do if rotation is not missing
     {
       # post this at the end of movement.
       $out .= "rotation = degrees($unit.rotation_euler[2]) + ($rotation)\n";
-      $out .= "$unit.keyframe_insert(data_path=\"rotation_euler\", frame=".($frame+$FRAMESFORMOVE-1).", index=2)\n";
+      $out .= "$unit.keyframe_insert(data_path=\"rotation_euler\", frame=".($frame+$delay-1).", index=2)\n";
       # set the rotation of the new impulse
       $out .= "$unit.rotation_euler = (0.0, 0.0, radians(rotation))\n";
-      $out .= "$unit.keyframe_insert(data_path=\"rotation_euler\", frame=".($frame+$FRAMESFORMOVE).", index=2)\n";
+      $out .= "$unit.keyframe_insert(data_path=\"rotation_euler\", frame=".($frame+$delay).", index=2)\n";
     }
   }
   # standard movement animation and mark the previous location
@@ -459,18 +477,18 @@ function keyframe_move( $unit, $X=null, $Y=null, $rotation="", $suddenMove=FALSE
   {
     if( isset($X) && isset($Y) ) # Movement may be missing (TACs, HETs, etc)
     {
-      $out .= "$unit.keyframe_insert(data_path=\"location\", frame=".($frame-1).")\n";
+      $out .= "$unit.keyframe_insert(data_path=\"location\", frame=".($frame+$delay-1).")\n";
       # set the location of the new impulse
       $out .= "$unit.location = ($X, $Y, $Z)\n";
-      $out .= "$unit.keyframe_insert(data_path=\"location\", frame=".($frame+$FRAMESFORMOVE).")\n";
+      $out .= "$unit.keyframe_insert(data_path=\"location\", frame=".($frame+$FRAMESFORMOVE+$delay).")\n";
     }
     if( $rotation != "" && $rotation <> 0 ) # skip if rotation is missing or is 0 degrees
     {
       $out .= "rotation = degrees($unit.rotation_euler[2]) + ($rotation)\n";
-      $out .= "$unit.keyframe_insert(data_path=\"rotation_euler\", frame=".($frame-1).", index=2)\n";
+      $out .= "$unit.keyframe_insert(data_path=\"rotation_euler\", frame=".($frame+$delay-1).", index=2)\n";
       # set the rotation of the new impulse
       $out .= "$unit.rotation_euler = (0.0, 0.0, radians(rotation))\n";
-      $out .= "$unit.keyframe_insert(data_path=\"rotation_euler\", frame=".($frame+$FRAMESFORMOVE).", index=2)\n";
+      $out .= "$unit.keyframe_insert(data_path=\"rotation_euler\", frame=".($frame+$FRAMESFORMOVE+$delay).", index=2)\n";
     }
   }
 
@@ -505,6 +523,7 @@ function card_set( $msg, $X, $Y, $time, $duration, $Z="3.0" )
   # set the message
   $out .= "obj.modifiers[\"GeometryNodes\"][\"Socket_2\"] = \"$msg\"\n";
   $out .= "obj.data.update()\n";
+  $out .= "obj.hide_render = False\n";
   # Move the new card
   $out .= "obj.keyframe_insert(data_path=\"location\", frame=".($time-1).")\n";
   # set the new location
@@ -513,7 +532,7 @@ function card_set( $msg, $X, $Y, $time, $duration, $Z="3.0" )
   # remove after $time
   $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $time + $duration ).")\n";
   $out .= "obj.location = ($offMapLocation)\n";
-  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $time + $duration + 1 ).")\n\n";
+  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $time + $duration + 1 ).")\n";
 
   return $out;
 }
@@ -584,8 +603,10 @@ function errorOut( $message )
   echo "   Change the frames per action-segment to this. Currently $FRAMESPERACTION frames.\n";
   echo "-m, --move\n";
   echo "   Change the frames per move-segment to this. Currently $FRAMESFORMOVE frames.\n";
+  echo "-q, --quiet\n";
+  echo "   On success, do not print anything to the terminal.\n";
   echo "-x, --no_action\n";
-  echo "   Remove the action animation wait for any impulses where there is no action to animate.\n";
+  echo "   Remove the wait time for any impulses where there is no action to animate.\n";
   exit(1);
 }
 
