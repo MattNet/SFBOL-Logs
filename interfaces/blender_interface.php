@@ -210,7 +210,7 @@ foreach( $unitCache as &$entry )
 $log->read( LogUnit::convertFromImp( 25 ) );
 
 # go through each impulse
-for( $i=0; $i<$LastLine; $i++ )
+for( $i=0; $i<=$LastLine; $i++ )
 {
 # Get the activity for this impulse
   $impulseActivity = $log->read( LogUnit::convertFromImp( $i ) );
@@ -224,7 +224,10 @@ for( $i=0; $i<$LastLine; $i++ )
 
   # skip if nothing happened here
   if( empty($impulseActivity) )
+  {
+    $frameIncrement += $FRAMESFORMOVE; # Every movement segment is tracked
     continue;
+  }
 
 # Iterate through the movement sequences
   foreach( $impulseActivity as $sequence=>$actionSet )
@@ -247,6 +250,7 @@ for( $i=0; $i<$LastLine; $i++ )
           $XLoc = ( ($X * $XHEXSIZE) + $XOFFSET - $XHEXSIZE);
           $YLoc = ( ($Y * $YHEXSIZE) + $YOFFSET - $YHEXSIZE + $hexVertBump);
 
+          $output .= "# Move ".$action["owner"]."\n";
           $rot = rotation($ShipsFacings[ $action["owner"] ], $action["facing"]);
           $output .= keyframe_move( $unitList[ $action["owner"] ]["blender"], $XLoc, $YLoc, $rot );
           $ShipsFacings[ $action["owner"] ] = $action["facing"];
@@ -255,6 +259,7 @@ for( $i=0; $i<$LastLine; $i++ )
         # if the facing changes between old and new facing
         else if( $ShipsFacings[ $action["owner"] ] != $action["facing"] )
         {
+          $output .= "# Change facing of ".$action["owner"]."\n";
           $rot = rotation($ShipsFacings[ $action["owner"] ], $action["facing"]);
           $output .= keyframe_move( $unitList[ $action["owner"] ]["blender"], null, null, $rot );
           $ShipsFacings[ $action["owner"] ] = $action["facing"];
@@ -304,6 +309,9 @@ for( $i=0; $i<$LastLine; $i++ )
       # if we are tractoring a unit
         if( $sequence == LogFile::SEQUENCE_TRACTORS )
         {
+//print_r($action);
+//          output .= "bpy.ops.mesh.primative_cone_add()\n";
+
           # Flag that we impulse activity
           $flagWasActivity = true;
         }
@@ -350,7 +358,6 @@ for( $i=0; $i<$LastLine; $i++ )
 
 # set the length of the animation
 # This is assuredly too large if $NOANIMATION is true
-//$output .= "bpy.context.scene.frame_end = ".(($LastLine+1)*$frameIncrement)."\n";
 $output .= "bpy.context.scene.frame_end = $frameIncrement\n";
 $output .= "bpy.context.scene.frame_set(0)\n";
 
@@ -358,8 +365,7 @@ $output .= "bpy.context.scene.frame_set(0)\n";
 if( ! isset($CLI["q"]) && ! isset($CLI["quiet"]) )
 {
   echo "###\nDebug Info:\n###\n";
-//  echo "Animation length: ".(($LastLine+1)*($FRAMESPERACTION*2+$FRAMESFORMOVE))." frames\n";
-  echo "Animation length: $frameIncrement frames\n";
+  echo "Animation length: $frameIncrement frames, ".floor( $frameIncrement / 24 )." seconds, lasts until T".LogUnit::convertFromImp( $LastLine )."\n";
   echo "Unit List:\n";
   print_r( $unitList );
   echo "\n";
