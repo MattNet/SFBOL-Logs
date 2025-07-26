@@ -56,6 +56,7 @@ class LogUnit
   private $pointerFacing = "A"; # tracks the last facing found. Used to determine HETs
   private $pointerSpeed = 0; # tracks the last speed change found. Used to determine TACs
   private $pointerTime = 0; # tracks the last impulse found, so any events can go to the right impulse
+  private $lastLocation = ""; # The last recorded location of this unit, for impulse activity
 
   ###
   # Class constructor
@@ -154,7 +155,11 @@ class LogUnit
           $internals = intval($matches[1]);
 
         $shields = $damage - $reinforcement - $internals;
-        $output = array( "internals"=>$internals, "owner"=>$this->name, "reinforcement"=>$reinforcement, "shields"=>$shields, "total"=>$damage );
+        $output = array( "internals"=>$internals, "owner"=>$this->name, 
+                         "owner location"=>$this->lastLocation, 
+                         "reinforcement"=>$reinforcement, "shields"=>$shields,
+                         "total"=>$damage
+                       );
 
         # add the tag information to the impulse
         if( ! isset($this->impulses[ $this->pointerTime ]) )
@@ -210,6 +215,9 @@ class LogUnit
           $this->impulses[ $this->pointerTime ] = array();
         $this->impulses[ $this->pointerTime ]["location"] = $output;
 
+        # update the latest location
+        $this->lastLocation = $location;
+
         continue; # Go to next line if the LOCATIONREGEX matched
       }
   # REMOVEREGEX
@@ -248,7 +256,9 @@ class LogUnit
       if( $status == 1 && $matches[1] == $this->name )
       {
         # fill out the tag information
-        $output = array( "owner"=>$this->name, "target"=>$matches[2], "tractordown"=>$this->pointerTime );
+        $output = array( "owner"=>$this->name, "owner location" => $this->lastLocation,
+                         "target"=>$matches[2], "tractordown"=>$this->pointerTime
+                       );
 
         # add the tag information to the impulse
         if( ! isset($this->impulses[ $this->pointerTime ]) )
@@ -262,7 +272,9 @@ class LogUnit
       if( $status == 1 && $matches[1] == $this->name )
       {
         # fill out the tag information
-        $output = array( "owner"=>$this->name, "target"=>$matches[2], "tractorup"=>$this->pointerTime );
+        $output = array( "owner"=>$this->name, "owner location" => $this->lastLocation,
+                         "target"=>$matches[2], "tractorup"=>$this->pointerTime
+                       );
 
         # add the tag information to the impulse
         if( ! isset($this->impulses[ $this->pointerTime ]) )
@@ -278,7 +290,10 @@ class LogUnit
         list( , , $wpn, $wpnID, $arc, $target ) = $matches;
         $range = end($matches); # optionally, the firing mode of the weapon preceeds the range entry
         # fill out the object and tag information
-        $output = array( "arc"=>$arc, "id"=>$wpnID, "owner"=>$this->name, "range"=>$range, "target"=>$target, "weapon"=>$wpn );
+        $output = array( "arc"=>$arc, "id"=>$wpnID, "owner"=>$this->name,
+                         "owner location" => $this->lastLocation, 
+                         "range"=>$range, "target"=>$target, "weapon"=>$wpn
+                       );
 
         # Add to $this->weapons
         $stuffer = array( "arc"=>$arc, "id"=>$wpnID, "weapon"=>$wpn );

@@ -219,8 +219,6 @@ foreach( $unitCache as &$entry )
   $output .= "obj.hide_render = False\n";
 }
 
-$log->read( LogUnit::convertFromImp( 25 ) );
-
 # go through each impulse
 for( $i=0; $i<=$LastLine; $i++ )
 {
@@ -259,15 +257,7 @@ for( $i=0; $i<=$LastLine; $i++ )
 #     [owner] => peon
 #     [turn] => side-slip
 # ]
-          $hexVertBump = 0;
-          $rot = 0;
-          $X = substr( $action["location"], 0, 2 );
-          $Y = substr( $action["location"], 2, 2 );
-          if( $X % 2 == 0 )
-            $hexVertBump = ($YHEXSIZE / 2); # even-numbered columns are vertically offset by half a hex      
-
-          $XLoc = ( ($X * $XHEXSIZE) + $XOFFSET - $XHEXSIZE);
-          $YLoc = ( ($Y * $YHEXSIZE) + $YOFFSET - $YHEXSIZE + $hexVertBump);
+          list( $XLoc, $YLoc ) = locationPixels( $action["location"] );
 
           $output .= "# Move ".$action["owner"]."\n";
           # if the unit never turns, skip determining rotation amount
@@ -318,15 +308,8 @@ for( $i=0; $i<=$LastLine; $i++ )
 #     [type] => Lyran Shuttle
 #     [owner] => S04.2.2
 # ]
-          $hexVertBump = 0;
           $rot = 0;
-          $X = substr( $action["location"], 0, 2 );
-          $Y = substr( $action["location"], 2, 2 );
-          if( $X % 2 == 0 )
-            $hexVertBump = ($YHEXSIZE / 2); # even-numbered columns are vertically offset by half a hex      
-
-          $XLoc = ( ($X * $XHEXSIZE) + $XOFFSET - $XHEXSIZE);
-          $YLoc = ( ($Y * $YHEXSIZE) + $YOFFSET - $YHEXSIZE + $hexVertBump);
+          list( $XLoc, $YLoc ) = locationPixels( $action["location"] );
 
           $output .= "# Launch/land ".$unitList[ $action["owner"] ]["basic"]."\n";
 
@@ -340,7 +323,7 @@ for( $i=0; $i<=$LastLine; $i++ )
           # Announce the action
           $output .= card_set( $unitList[ $action["owner"] ]["basic"]." Launch", $XLoc, $YLoc, $frame+$FRAMESFORMOVE, $FRAMESPERACTION );
 
-          # Flag that we impulse activity
+          # Flag that we had impulse activity
           $flagWasActivity = true;
          }
       # if we are tractoring a unit
@@ -348,21 +331,31 @@ for( $i=0; $i<=$LastLine; $i++ )
         {
 # $action [
 #     [owner] => Master blaster
+#     [owner location] => 1234
 #     [target] => D013(C).2.25
 #     [tractorup] => 79
 # ]
+          list( $XLoc, $YLoc ) = locationPixels( $action["owner location"] );
+
+          $output .= "# ".$action["owner"]." tractors ".$action["target"]."\n";
+
+          # Announce the action
+          $output .= card_set( "Tractor", $XLoc, $YLoc, $frame+$FRAMESFORMOVE, $FRAMESPERACTION );
+
 //          output .= "bpy.ops.mesh.primative_cone_add()\n";
 
-          # Flag that we impulse activity
+          # Flag that we had impulse activity
           $flagWasActivity = true;
         }
       # if we are cloaking a unit
         if( $sequence == LogFile::SEQUENCE_CLOAKING_DEVICE )
         {
+          $output .= "# ".$action["owner"]." cloaks\n";
+
           # Announce the action
           $output .= card_set( "Cloak", $XLoc, $YLoc, $frame+$FRAMESFORMOVE, $FRAMESPERACTION );
 
-          # Flag that we impulse activity
+          # Flag that we had impulse activity
           $flagWasActivity = true;
         }
       }
@@ -370,18 +363,45 @@ for( $i=0; $i<=$LastLine; $i++ )
 # Firing
     else if( $sequence < LogFile::SEQUENCE_IMPULSE_END )
     {
-//      foreach( $actionSet as $action )
+      foreach( $actionSet as $action )
       {
+        if( isset($action["weapon"]) )
+        {
 # $action [
 #     [arc] => LS
 #     [id] => 5
 #     [owner] => peon
+#     [owner location] => 1234
 #     [range] => 2
 #     [target] => Andy
 #     [weapon] => Phaser-1
 # ]
-          # Flag that we impulse activity
+          list( $XLoc, $YLoc ) = locationPixels( $action["owner location"] );
+
+          $output .= "# ".$action["owner"]." fires on ".$action["target"]."\n";
+
+          # Flag that we had impulse activity
           $flagWasActivity = true;
+        }
+        else if( isset($action["total"]) )
+        {
+# $action [
+#     [internals] => 7
+#     [owner] => ncc1792
+#     [owner location] => 1234
+#     [reinforcement] => 0
+#     [shields] => 3
+#     [total] => 10
+# ]
+          list( $XLoc, $YLoc ) = locationPixels( $action["owner location"] );
+
+          # Announce the action
+          $msg = $action["shields"];
+          if( $action["internals"] > 0 )
+            $msg .= "+".$action["internals"];
+          $output .= card_set( $msg, $XLoc, $YLoc, $frame+$FRAMESFORMOVE+$FRAMESPERACTION, $FRAMESPERACTION );
+
+        }
       }
     }
 # End of impulse
@@ -468,6 +488,33 @@ function rotation( $old, $new )
   $amt *= -60;
 
   return $amt;
+}
+
+###
+# Determines the X and Y blender units, from the location string
+###
+# Args are:
+# - (string) The 4-digit location of the unit. [row][column] format
+# Returns:
+# - (int) the column (X) value of the location
+# - (int) the row (Y) value of the location
+###
+function locationPixels( $loc )
+{
+  global $XHEXSIZE, $YHEXSIZE, $XOFFSET, $YOFFSET;
+
+  $hexVertBump = 0;
+
+  $x = substr( $loc, 0, 2 );
+  $y = substr( $loc, 2, 2 );
+
+  if( $x % 2 == 0 )
+    $hexVertBump = ($YHEXSIZE / 2); # even-numbered columns are vertically offset by half a hex      
+
+  $xLoc = ( ($x * $XHEXSIZE) + $XOFFSET - $XHEXSIZE);
+  $yLoc = ( ($y * $YHEXSIZE) + $YOFFSET - $YHEXSIZE + $hexVertBump);
+
+  return array( $xLoc, $yLoc );
 }
 
 ###
