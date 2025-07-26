@@ -24,63 +24,63 @@ This assumes that the python script will be run in a blender file that contains:
 ###
 define( 'MODEL_NAME', array(
 # Ships
-  'Andromedan Krait (Official)' => 'Andromedan KRA',
-  'Archeo-Tholian TCC' => 'Tholian ATC',
-  'Fed TCC (G-Rack) (Playtest)' => 'Federation TCA',
-  'Fed TCC (Official' => 'Federation TCA',
-  'Frax TC (Playtest)' => 'Frax TCA',
-  'Gorn TCC' => 'Gorn TCA',
-  'Hydran TLM' => 'Hydran TCC',
-  'ISC TCC' => 'ISC CA',
-  'Klingon TD7C' => 'Klingon D7CT',
-  'Kzinti TCC' => 'Kzinti TCC',
-  'LDR TCWL' => 'LDR TCWL',
-  'Lyran TCC' => 'Lyran TCA',
-  'Orion TBR' => 'Orion TBR',
-  'Romulan TFH' => 'Romulan TFH',
-  'Romulan TKE' => 'Romulan TKE',
-  'Romulan TKR' => 'Romulan TKR',
-  'Seltorian TCA' => 'Seltorian TCA',
-  'Vudar TCA' => 'Vudar TCA',
-  'Wyn GBS' => 'WYN GBS',
-  'Wyn TAxBC' => 'WYN AuxBCT',
+  'Andromedan Krait (Official)' => array( "name" => 'Andromedan KRA', 'no_rotate' => false ),
+  'Archeo-Tholian TCC' => array( "name" => 'Tholian ATC', 'no_rotate' => false ),
+  'Fed TCC (G-Rack) (Playtest)' => array( "name" => 'Federation TCA', 'no_rotate' => false ),
+  'Fed TCC (Official' => array( "name" => 'Federation TCA', 'no_rotate' => false ),
+  'Frax TC (Playtest)' => array( "name" => 'Frax TCA', 'no_rotate' => false ),
+  'Gorn TCC' => array( "name" => 'Gorn TCA', 'no_rotate' => false ),
+  'Hydran TLM' => array( "name" => 'Hydran TCC', 'no_rotate' => false ),
+  'ISC TCC' => array( "name" => 'ISC CA', 'no_rotate' => false ),
+  'Klingon TD7C' => array( "name" => 'Klingon D7CT', 'no_rotate' => false ),
+  'Kzinti TCC' => array( "name" => 'Kzinti TCC', 'no_rotate' => false ),
+  'LDR TCWL' => array( "name" => 'LDR TCWL', 'no_rotate' => false ),
+  'Lyran TCC' => array( "name" => 'Lyran TCA', 'no_rotate' => false ),
+  'Orion TBR' => array( "name" => 'Orion TBR', 'no_rotate' => false ),
+  'Romulan TFH' => array( "name" => 'Romulan TFH', 'no_rotate' => false ),
+  'Romulan TKE' => array( "name" => 'Romulan TKE', 'no_rotate' => false ),
+  'Romulan TKR' => array( "name" => 'Romulan TKR', 'no_rotate' => false ),
+  'Seltorian TCA' => array( "name" => 'Seltorian TCA', 'no_rotate' => false ),
+  'Vudar TCA' => array( "name" => 'Vudar TCA', 'no_rotate' => false ),
+  'Wyn GBS' => array( "name" => 'WYN GBS', 'no_rotate' => false ),
+  'Wyn TAxBC' => array( "name" => 'WYN AuxBCT', 'no_rotate' => false ),
 # Expendables
-  'Andromedan Mine' => 'Mine',
-  'Archeo-Tholian Web' => 'Web',
-  'Archeo-Tholian Shuttle' => 'Shuttle',
-  'Fed Drone' => 'Drone',
-  'Fed Shuttle' => 'Federation Shuttle',
-  'Frax Drone' => 'Drone',
-  'Frax Shuttle' => 'Federation Shuttle',
-  'Gorn Plasma' => 'Plasma',
-  'Gorn Shuttle' => 'Federation Shuttle',
-  'Hydran Fighter' => '',
-  'Hydran Shuttle' => 'Federation Shuttle',
-  'ISC Plasma' => 'Plasma',
-  'ISC Shuttle' => 'Federation Shuttle',
-  'Klingon Drone' => 'Drone',
-  'Klingon Shuttle' => 'Federation Shuttle',
-  'LDR ESG' => 'ESG',
-  'LDR Shuttle' => 'Federation Shuttle',
-  'Lyran ESG' => 'ESG',
-  'Lyran Shuttle' => 'Federation Shuttle',
-  'Orion Drone' => 'Drone',
-  'Orion ESG' => 'ESG',
-  'Orion Plasma' => 'Plasma',
-  'Orion Shuttle' => 'Federation Shuttle',
-  'TFE Plasma' => 'Plasma',
-  'TKE Plasma' => 'Plasma',
-  'TKR Plasma' => 'Plasma',
-  'Romulan Shuttle' => 'Federation Shuttle',
-  'Vudar Shuttle' => 'Federation Shuttle',
-  'Wyn TAxBC Drone' => 'Drone',
-  'WYN ESG' => 'ESG',
-  'WYN Plasma' => 'Plasma',
-  'Wyn TAxBC Shuttle' => 'Federation Shuttle',
+  'Andromedan Mine' => array( "name" => 'Mine', 'no_rotate' => true ),
+  'Archeo-Tholian Web' => array( "name" => 'Web', 'no_rotate' => true ),
+  'Archeo-Tholian Shuttle' => array( "name" => 'Shuttle', 'no_rotate' => false ),
+  'Fed Drone' => array( "name" => 'Drone', 'no_rotate' => false ),
+  'Fed Shuttle' => array( "name" => 'Federation Shuttle', 'no_rotate' => false ),
+  'Frax Drone' => array( "name" => 'Drone', 'no_rotate' => false ),
+  'Frax Shuttle' => array( "name" => 'Federation Shuttle', 'no_rotate' => false ),
+  'Gorn Plasma' => array( "name" => 'Plasma', 'no_rotate' => false ),
+  'Gorn Shuttle' => array( "name" => 'Federation Shuttle', 'no_rotate' => false ),
+  'Hydran Fighter' => array( "name" => '', 'no_rotate' => false ), # No Stinger Model
+  'Hydran Shuttle' => array( "name" => 'Federation Shuttle', 'no_rotate' => false ),
+  'ISC Plasma' => array( "name" => 'Plasma', 'no_rotate' => false ),
+  'ISC Shuttle' => array( "name" => 'Federation Shuttle', 'no_rotate' => false ),
+  'Klingon Drone' => array( "name" => 'Drone', 'no_rotate' => false ),
+  'Klingon Shuttle' => array( "name" => 'Federation Shuttle', 'no_rotate' => false ),
+  'LDR ESG' => array( "name" => 'ESG', 'no_rotate' => true ),
+  'LDR Shuttle' => array( "name" => 'Federation Shuttle', 'no_rotate' => false ),
+  'Lyran ESG' => array( "name" => 'ESG', 'no_rotate' => true ),
+  'Lyran Shuttle' => array( "name" => 'Federation Shuttle', 'no_rotate' => false ),
+  'Orion Drone' => array( "name" => 'Drone', 'no_rotate' => false ),
+  'Orion ESG' => array( "name" => 'ESG', 'no_rotate' => true ),
+  'Orion Plasma' => array( "name" => 'Plasma', 'no_rotate' => false ),
+  'Orion Shuttle' => array( "name" => 'Federation Shuttle', 'no_rotate' => false ),
+  'TFE Plasma' => array( "name" => 'Plasma', 'no_rotate' => false ),
+  'TKE Plasma' => array( "name" => 'Plasma', 'no_rotate' => false ),
+  'TKR Plasma' => array( "name" => 'Plasma', 'no_rotate' => false ),
+  'Romulan Shuttle' => array( "name" => 'Federation Shuttle', 'no_rotate' => false ),
+  'Vudar Shuttle' => array( "name" => 'Federation Shuttle', 'no_rotate' => false ),
+  'Wyn TAxBC Drone' => array( "name" => 'Drone', 'no_rotate' => false ),
+  'WYN ESG' => array( "name" => 'ESG', 'no_rotate' => true ),
+  'WYN Plasma' => array( "name" => 'Plasma', 'no_rotate' => false ),
+  'Wyn TAxBC Shuttle' => array( "name" => 'Federation Shuttle', 'no_rotate' => false ),
 # Misc
-  'Andromedan DisDev' => '',
-  'Card' => 'Card',
-  'CamCard' => 'Camera Title',
+  'Andromedan DisDev' => array( "name" => 'DisDev Marker', 'no_rotate' => true ),
+  'Card' => array( "name" => 'Card', 'no_rotate' => true ),
+  'CamCard' => array( "name" => 'Camera Title', 'no_rotate' => true ),
 ) );
 
 # these are configuration variables
@@ -175,7 +175,7 @@ if( $log->error != "" )
 ###
 
 # Get a list of units
-# format is $unitCache[ index ] = [
+# $unitCache[ index ][
 #   "added" => impulse_created,
 #   "basic" => "basic type",
 #   "name" => "name in log file",
@@ -190,15 +190,27 @@ foreach( $unitCache as &$entry )
   $entry["blender"] = "bpy.data.objects['".$entry["name"]."']";
   $ShipsFacings[ $entry["name"] ] = "D"; // This is the model's initial facing. 'A' is pointing in the +Y direction
 
-  # Set $unitList to $unitCache, but indicies are the unit name
+  $entry["no_rotate"] = MODEL_NAME[$entry["type"]]["no_rotate"];
+
+  # Assign $unitList from $unitCache, but indicies are the unit name
   $unitList[ $entry["name"] ] = $entry;
+
+# $unitList[ "name in log file" ][
+#   "added" => impulse_created,
+#   "basic" => "basic type",
+#   "blender" => "bpy.data.objects[ 'name in log file' ]",
+#   "name" => "name in log file",
+#   "no_rotate" => should this never turn: true/false,
+#   "removed" => impulse_destroyed,
+#   "type" => "MODEL_NAME index"
+# ]
 
   # update $LastLine
   if( $LastLine < $entry["removed"] )
     $LastLine = $entry["removed"];
 
 # duplicate templated items in Blender to create named items to be moved
-  $active_object = MODEL_NAME[$entry["type"]];
+  $active_object = MODEL_NAME[$entry["type"]]["name"];
   # select the $entry item and make active
   $output .= "bpy.context.view_layer.objects.active = bpy.data.objects['$active_object']\n";
   $output .= "obj = bpy.data.objects['$active_object'].copy()\n";
@@ -214,7 +226,6 @@ for( $i=0; $i<=$LastLine; $i++ )
 {
 # Get the activity for this impulse
   $impulseActivity = $log->read( LogUnit::convertFromImp( $i ) );
-//  $frame = $i * ($FRAMESPERACTION * 2 + $FRAMESFORMOVE);
   $frame = $frameIncrement;
   $flagWasActivity = false;
 
@@ -239,9 +250,17 @@ for( $i=0; $i<=$LastLine; $i++ )
       foreach( $actionSet as $action )
       {
       # Change location
-        if( isset($action["location"]) ) # a movement order
+        if( isset($action["location"]) )
         {
+        # a movement order
+# action [
+#     [facing] => C
+#     [location] => 2417
+#     [owner] => peon
+#     [turn] => side-slip
+# ]
           $hexVertBump = 0;
+          $rot = 0;
           $X = substr( $action["location"], 0, 2 );
           $Y = substr( $action["location"], 2, 2 );
           if( $X % 2 == 0 )
@@ -251,14 +270,21 @@ for( $i=0; $i<=$LastLine; $i++ )
           $YLoc = ( ($Y * $YHEXSIZE) + $YOFFSET - $YHEXSIZE + $hexVertBump);
 
           $output .= "# Move ".$action["owner"]."\n";
-          $rot = rotation($ShipsFacings[ $action["owner"] ], $action["facing"]);
+          # if the unit never turns, skip determining rotation amount
+          if( ! $unitList[ $action["owner"] ]["no_rotate"] )
+            $rot = rotation($ShipsFacings[ $action["owner"] ], $action["facing"]);
           $output .= keyframe_move( $unitList[ $action["owner"] ]["blender"], $XLoc, $YLoc, $rot );
           $ShipsFacings[ $action["owner"] ] = $action["facing"];
         }
       # Change facing
         # if the facing changes between old and new facing
-        else if( $ShipsFacings[ $action["owner"] ] != $action["facing"] )
+        else if( $ShipsFacings[ $action["owner"] ] != $action["facing"] && ! $unitList[ $action["owner"] ]["no_rotate"] )
         {
+# action [
+#     [facing] => C
+#     [owner] => peon
+#     [turn] => 5
+# ]
           $output .= "# Change facing of ".$action["owner"]."\n";
           $rot = rotation($ShipsFacings[ $action["owner"] ], $action["facing"]);
           $output .= keyframe_move( $unitList[ $action["owner"] ]["blender"], null, null, $rot );
@@ -284,7 +310,16 @@ for( $i=0; $i<=$LastLine; $i++ )
             $sequence == LogFile::SEQUENCE_LAUNCH_SHUTTLES
           )
         {
+# $action [
+#     [Add] => 34
+#     [facing] => D
+#     [location] => 2416
+#     [speed] => 6
+#     [type] => Lyran Shuttle
+#     [owner] => S04.2.2
+# ]
           $hexVertBump = 0;
+          $rot = 0;
           $X = substr( $action["location"], 0, 2 );
           $Y = substr( $action["location"], 2, 2 );
           if( $X % 2 == 0 )
@@ -296,7 +331,9 @@ for( $i=0; $i<=$LastLine; $i++ )
           $output .= "# Launch/land ".$unitList[ $action["owner"] ]["basic"]."\n";
 
           # Set the initial rotation/location
-          $rot = rotation($ShipsFacings[ $action["owner"] ], $action["facing"]);
+          # if the unit never turns, skip determining rotation amount
+          if( ! $unitList[ $action["owner"] ]["no_rotate"] )
+            $rot = rotation($ShipsFacings[ $action["owner"] ], $action["facing"]);
           $output .= keyframe_move( $unitList[ $action["owner"] ]["blender"], $XLoc, $YLoc, $rot, $FRAMESFORMOVE, true );
           $ShipsFacings[ $action["owner"] ] = $action["facing"];
 
@@ -309,7 +346,11 @@ for( $i=0; $i<=$LastLine; $i++ )
       # if we are tractoring a unit
         if( $sequence == LogFile::SEQUENCE_TRACTORS )
         {
-//print_r($action);
+# $action [
+#     [owner] => Master blaster
+#     [target] => D013(C).2.25
+#     [tractorup] => 79
+# ]
 //          output .= "bpy.ops.mesh.primative_cone_add()\n";
 
           # Flag that we impulse activity
@@ -331,6 +372,14 @@ for( $i=0; $i<=$LastLine; $i++ )
     {
 //      foreach( $actionSet as $action )
       {
+# $action [
+#     [arc] => LS
+#     [id] => 5
+#     [owner] => peon
+#     [range] => 2
+#     [target] => Andy
+#     [weapon] => Phaser-1
+# ]
           # Flag that we impulse activity
           $flagWasActivity = true;
       }
@@ -340,7 +389,14 @@ for( $i=0; $i<=$LastLine; $i++ )
     {
       foreach( $actionSet as $action )
       {
+# $action [
+#     [add] => 25
+#     [owner] => D001(1).1.25
+#     [remove] => 42
+#     [type] => Wyn TAxBC Drone
+# ]
         # "remove" the unit (move off the map)
+        $output .= "# Remove ".$action["owner"]."\n";
         $rot = rotation($ShipsFacings[ $action["owner"] ], "A");
         $output .= keyframe_move( $unitList[ $action["owner"] ]["blender"], $XLoc, $YLoc, $rot, $FRAMESFORMOVE + (2 * $FRAMESPERACTION), true, "-10.0" );
         $ShipsFacings[ $action["owner"] ] = "A";
@@ -450,7 +506,7 @@ function keyframe_move( $unit, $X=null, $Y=null, $rotation="", $delay=0, $sudden
       $out .= "$unit.keyframe_insert(data_path=\"location\", frame=0)\n";
     }
     # set the original rotation to the frame before movement starts
-    if( $rotation != "" ) # do if rotation is not missing
+    if( $rotation != "" && $rotation <> 0 ) # skip if rotation is missing or is 0 degrees
     {
       $out .= "$unit.rotation_euler = (0.0, 0.0, radians($rotation))\n";
       $out .= "$unit.keyframe_insert(data_path=\"rotation_euler\", frame=0, index=2)\n";
@@ -468,7 +524,7 @@ function keyframe_move( $unit, $X=null, $Y=null, $rotation="", $delay=0, $sudden
       $out .= "$unit.keyframe_insert(data_path=\"location\", frame=".($frame+$delay).")\n";
     }
     # set the original rotation to the frame before movement starts
-    if( $rotation != "" ) # do if rotation is not missing
+    if( $rotation != "" && $rotation <> 0 ) # skip if rotation is missing or is 0 degrees
     {
       # post this at the end of movement.
       $out .= "rotation = degrees($unit.rotation_euler[2]) + ($rotation)\n";
@@ -519,7 +575,7 @@ function card_set( $msg, $X, $Y, $time, $duration, $Z="3.0" )
   $out = "";
 
   # Duplicate and select the card
-  $cardName = MODEL_NAME["Card"];
+  $cardName = MODEL_NAME["Card"]["name"];
   $cardObject = "bpy.data.objects[\"$cardName\"]";
   $out .=  "# Add speech bubble '$msg'\n";
   $out .= "$cardObject.select_set(True)\nbpy.context.view_layer.objects.active = $cardObject\n";
@@ -538,7 +594,7 @@ function card_set( $msg, $X, $Y, $time, $duration, $Z="3.0" )
   # remove after $time
   $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $time + $duration ).")\n";
   $out .= "obj.location = ($offMapLocation)\n";
-  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $time + $duration + 1 ).")\n";
+  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $time + $duration + 1 ).")\n\n";
 
   return $out;
 }
@@ -566,7 +622,7 @@ function impulse_display( $time )
 
   $out = "# Display \"T".$turn."i".$impulse."\" at camera.\n";
   # select the impulse card
-  $cardName = MODEL_NAME["CamCard"];
+  $cardName = MODEL_NAME["CamCard"]["name"];
   $cardObject = "bpy.data.objects[\"$cardName\"]";
   $out .= "$cardObject.select_set(True)\nbpy.context.view_layer.objects.active = $cardObject\n";
 
