@@ -227,7 +227,7 @@ for( $i=0; $i<=$LastLine; $i++ )
   $frame = $frameIncrement;
   $flagWasActivity = false;
 
-  $output .= "\n# Start of impulse ".LogUnit::convertFromImp( $i ).", animation frame $frame\n\n";
+  $output .= "# Start of impulse ".LogUnit::convertFromImp( $i ).", animation frame $frame\n\n";
 
 //  $output .= impulse_display( $i );
 
@@ -237,8 +237,7 @@ for( $i=0; $i<=$LastLine; $i++ )
     $frameIncrement += $FRAMESFORMOVE; # Every movement segment is tracked
     continue;
   }
-
-# Iterate through the movement sequences
+# Iterate through the impulse sequences
   foreach( $impulseActivity as $sequence=>$actionSet )
   {
 
@@ -350,6 +349,12 @@ for( $i=0; $i<=$LastLine; $i++ )
       # if we are cloaking a unit
         if( $sequence == LogFile::SEQUENCE_CLOAKING_DEVICE )
         {
+# $action [
+#     [owner] => Dancer
+#     [owner location] => 1234
+# ]
+          list( $XLoc, $YLoc ) = locationPixels( $action["owner location"] );
+
           $output .= "# ".$action["owner"]." cloaks\n";
 
           # Announce the action
@@ -491,7 +496,7 @@ function rotation( $old, $new )
 }
 
 ###
-# Determines the X and Y blender units, from the location string
+# Determines the X and Y blender units from the location string
 ###
 # Args are:
 # - (string) The 4-digit location of the unit. [row][column] format

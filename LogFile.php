@@ -21,6 +21,7 @@ class LogFile
 
   private $ADDREGEX = "/(.*) \(Type:(.*?)\) has been added at (\d{4,4})/";
   private $FRAMEREGEX = "/^Impulse (\d*\.\d*):$/";
+  private $PLAYERREGEX = "/^(.*?) has selected (.*?)$/";
 
   public const SEQUENCE_MOVEMENT_SHIPS		= 0;
   public const SEQUENCE_MOVEMENT_SHUTTLES	= 1;
@@ -72,9 +73,13 @@ class LogFile
       $log = explode( "\n", $log );
     else if( is_array( $log ) != true ) # if the log data is not an array or string, then exit
     {
-      $error .= "Input of {self::CLASS} constructor is not a string or array.\n";
+      $error .= "Input of ${self::CLASS} constructor is not a string or array.\n";
       return( 1 );
     }
+
+    # List of player for units.
+    # $player_list[ unit ] = player
+    $player_list = array();
 
     # go through each line of the input file
     foreach( $log as $lineNum => $line )
@@ -93,11 +98,33 @@ class LogFile
         $unit_key = array_key_last( $this->UNITS );
         $unit_name = $this->UNITS[ $unit_key ]->name;
         $this->UNIT_LOOKUP[ $unit_name ] = $unit_key; # populate the reverse lookup
+        # error reporting for the construction of the unit
         if( $this->UNITS[ $unit_key ]->error != "" )
           $this->error .= "Unit '$unit_name' errors:\n".$this->UNITS[ $unit_key ]->error;
         continue; # Go to next line if the ADDREGEX matched
       }
+  # PLAYERREGEX
+      $status = preg_match( $this->PLAYERREGEX, $line, $matches );
+      if( $status == 1 )
+        $player_list[ $matches[2] ] = $matches[1];
     }
+
+    # Assign players to units:
+    # This is being done post-unit-creation
+    # Cloaking depends on this, due to how it's reported in the logs
+    foreach( $player_list as $unit_type => $player_name )
+    {
+      foreach( $this->UNITS as &$unit_obj )
+        if( $unit_obj->type == $unit_type )
+          $unit_obj->owner = $player_name;
+    }
+
+    foreach( $this->UNITS as &$unit_obj )
+      $unit_obj->postProcess( $log );
+
+    # error reporting for the entire read
+    if( $this->error != "" )
+      echo $this-error;
   }
 
   ###
@@ -196,6 +223,15 @@ class LogFile
             $phase = self::SEQUENCE_CAST_WEB;
             break;
           }
+          if( ! isset($output[ $phase ]) || ! is_array($output[ $phase ]) )
+            $output[ $phase ] = array();
+          $output[ $phase ][] = $value;
+
+          break;
+
+        case "cloak":
+          $phase = self::SEQUENCE_CLOAKING_DEVICE;
+
           if( ! isset($output[ $phase ]) || ! is_array($output[ $phase ]) )
             $output[ $phase ] = array();
           $output[ $phase ][] = $value;

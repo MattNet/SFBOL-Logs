@@ -31,6 +31,7 @@ class LogUnit
   public $added = 0; # When the unit was added to the board
   public $error = ""; # error string, should something fail
   public $name = ""; # name of the unit
+  public $owner = ""; # the player who decides for the unit
   public $removed = 0; # when the unit was removed from the board (Last impulse, if not removed)
   public $type = ""; # the unit type (e.g. "LDR TCWL")
   public $basicType = ""; # the basic unit type (e.g. "ship", "drone", etc...)
@@ -41,6 +42,8 @@ class LogUnit
   protected $impulses = array();
 
   private $ADDREGEX = "/^(.*) \(Type:(.*?)\) has been added at (\d{4,4})(?:, direction (\w+), speed (\d+))?/";
+  private $CLOAKREGEX = "/^Activity Orders \(Segment: 6B02.01, Activate\/deactivate cloaking device.\)/";
+  private $CLOAKWHOREGEX = "/^(.+?) orders are/";
   private $DAMAGEREGEX = "/^Allocation of damage for: (.*)$/";
   private $DMGAREGEX = "/^Damage: (\d+)\/(\d+)\/(\d+)\/(\d+)\/(\d+)\/(\d+) \(Total: (\d+)\)$/";
   private $DMGBREGEX = "/^Shield Reinforcement: (\d+)\/(\d+)\/(\d+)\/(\d+)\/(\d+)\/(\d+)$/";
@@ -57,6 +60,7 @@ class LogUnit
   private $pointerSpeed = 0; # tracks the last speed change found. Used to determine TACs
   private $pointerTime = 0; # tracks the last impulse found, so any events can go to the right impulse
   private $lastLocation = ""; # The last recorded location of this unit, for impulse activity
+  private $flagNeedMoreLogFile = false; # Flag for post-processing: do we need to iterate through the logfile again?
 
   ###
   # Class constructor
@@ -123,6 +127,15 @@ class LogUnit
         $this->impulses[ $this->pointerTime ]["add"] = $output;
 
         continue; # Go to next line if the ADDREGEX matched
+      }
+  # CLOAKREGEX
+      $status = preg_match( $this->CLOAKREGEX, $line, $matches );
+      if( $status == 1 )
+      {
+        # Mark this as needing post-processing.
+        # Due to how it is reported in the logs, cloaking is marked based on the player controlling the unit, not on the unit name
+        # This means that it is not always accurate that this is the unit doing the cloaking.
+        $this->flagNeedMoreLogFile = true;
       }
   # DAMAGEREGEX
       $status = preg_match( $this->DAMAGEREGEX, $line, $matches );
@@ -312,6 +325,47 @@ class LogUnit
     # if we never saw a "removed" statement for this unit, then set "removed" to the last impulse
     if( $this->removed == 0 )
       $this->removed = $this->pointerTime;
+  }
+
+  ###
+  # Perform post object-creation processes
+  # These are self-modifying processes, due to things that happen after this object or other objects are instantiated
+  ###
+  # Args are:
+  # - None
+  # Returns:
+  # - None
+  ###
+  function postProcess( $log )
+  {
+    if( $this->flagNeedMoreLogFile )
+      # go through each line of the input file (again)
+      # This is to fill in things that are missed, now that we have more 
+      # knowledge of what is in the log file
+      foreach( $log as $lineNum => $line )
+      {
+    # FRAMEREGEX
+        $status = preg_match( $this->FRAMEREGEX, $line, $matches );
+        if( $status == 1 )
+        {
+          $this->pointerTime = self::convertToImp( $matches[1] );
+          if( $this->pointerTime === null )
+            $this->error .= "Impulse conversion in the wrong format. Given '{$matches[1]}',  Unit '".$this->name."'.";
+          continue; # Go to next line if the FRAMEREGEX matched
+        }
+    # CLOAKREGEX
+        $status = preg_match( $this->CLOAKREGEX, $line, $matches );
+        if( $status == 1 )
+        {
+          # Match the player making the announcement to this unit
+          $status = preg_match( $this->CLOAKWHOREGEX, $log[$lineNum+1], $matches );
+          if( $status == 1 && $matches[1] == $this->owner )
+          {
+            $output = array( "owner"=>$this->name, "owner location" => $this->lastLocation );
+            $this->impulses[ $this->pointerTime ]["cloak"] = $output;
+          }
+        }
+      }
   }
 
   ###
@@ -521,6 +575,7 @@ class LogUnit
   ###
   # Determines the basic unit type from the specific unit type
   # e.g. "LDR TCWL" is a basic type "ship"
+  # See (A3.23)
   ###
   # Args are:
   # - (string) The specific unit type
@@ -533,7 +588,7 @@ class LogUnit
     # handle all types of drones
     if( substr( $type, -5 ) == "drone" )
       return "drone";
-    # handle all types of shuttles
+    # handle all types of plasmas
     if( substr( $type, -6 ) == "plasma" )
       return "plasma";
     # handle all types of shuttles
@@ -555,7 +610,7 @@ class LogUnit
     if( substr( $type, -3 ) == "web" )
       return "web";
 
-    #assume anything left is a ship
+    # assume anything left is a ship
     return "ship";
   }
 }
