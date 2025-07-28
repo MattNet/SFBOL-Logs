@@ -508,6 +508,10 @@ function locationPixels( $loc )
 {
   global $XHEXSIZE, $YHEXSIZE, $XOFFSET, $YOFFSET;
 
+  # error out on invalid entry
+  if( $loc === NULL )
+    return NULL;
+
   $hexVertBump = 0;
 
   $x = substr( $loc, 0, 2 );

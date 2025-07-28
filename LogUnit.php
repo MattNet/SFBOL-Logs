@@ -77,7 +77,7 @@ class LogUnit
       $log = explode( "\n", $log );
     else if( is_array( $log ) != true ) # if the log data is not an array or string, then exit
     {
-      $error .= " Input of {self::CLASS} constructor is not a string or array.";
+      $error .= " Input of ".self::class." constructor is not a string or array.";
       return( 1 );
     }
 
@@ -361,7 +361,11 @@ class LogUnit
           $status = preg_match( $this->CLOAKWHOREGEX, $log[$lineNum+1], $matches );
           if( $status == 1 && $matches[1] == $this->owner )
           {
-            $output = array( "owner"=>$this->name, "owner location" => $this->lastLocation );
+            if( ! isset( $this->impulses[ $this->pointerTime ] ) )
+              $this->impulses[ $this->pointerTime ] = array();
+            $output = array( "owner"=>$this->name,
+                             "owner location" => $this->getCurrentLocation( $this->pointerTime )
+                           );
             $this->impulses[ $this->pointerTime ]["cloak"] = $output;
           }
         }
@@ -381,12 +385,12 @@ class LogUnit
     $time = self::convertToImp( $time );
     if( $time === null )
     {
-      $this->error .= "Invalid time format in read(). Given '$time', Unit '".$this->name."'.\n";
+      $this->error .= "Invalid time format in ".self::class."->read(). Given '$time', Unit '".$this->name."'.\n";
       return NULL;
     }
     if( ! isset($this->impulses[$time]) )
     {
-      $this->error .= "Time given to read() is not recorded in the log file: Unit '".$this->name."', Turn ".self::convertFromImp($time)."\n";
+      $this->error .= "Time given to ".self::class."->read() is not recorded in the log file: Unit '".$this->name."', Turn ".self::convertFromImp($time)."\n";
       return NULL;
     }
     return $this->impulses[$time];
@@ -420,19 +424,19 @@ class LogUnit
     $time = self::convertToImp( $time );
     if( $time === null )
     {
-      $this->error .= "Invalid time format in removeAction(). Given '$time', Unit '".$this->name."'.\n";
+      $this->error .= "Invalid time format in ".self::class."->removeAction(). Given '$time', Unit '".$this->name."'.\n";
       return false;
     }
     if( ! isset($this->impulses[$time]) )
     {
-      $this->error .= "Time given to removeAction() is not recorded in the log file: Unit '".$this->name."', Turn ".self::convertFromImp($time)."\n";
+      $this->error .= "Time given to ".self::class."->removeAction() is not recorded in the log file: Unit '".$this->name."', Turn ".self::convertFromImp($time)."\n";
       return false;
     }
 
     # sanitize the $action input
     if( ! isset($this->impulses[$time][$action]) )
     {
-      $this->error .= "Action given to removeAction() does not exist at $time. Unit '".$this->name."'\n";
+      $this->error .= "Action given to ".self::class."->removeAction() does not exist at $time. Unit '".$this->name."'\n";
       return false;
     }
 
@@ -453,18 +457,52 @@ class LogUnit
   # Returns:
   # - (int) The last speed change
   ###
+  function getCurrentLocation( $time )
+  {
+    $output = 0;
+    $time = self::convertToImp( $time );
+    if( $time === null )
+    {
+      $this->error .= "Invalid time format in ".self::class."->getCurrentLocation(). Given '$time', Unit '".$this->name."'.\n";
+      return NULL;
+    }
+//var_dump($time);
+    if( ! isset($this->impulses[$time]) )
+    {
+      $this->error .= "Time given to ".self::class."->getCurrentLocation() is not recorded in the log file: Unit '".$this->name."', at $time\n";
+      return NULL;
+    }
+    $input = $this->readAll();
+    foreach( $input as $impulse=>$actions )
+    {
+      if( $time < $impulse )
+        break;
+      if( isset( $actions["location"] ) )
+        $output = $actions["location"]["location"];
+    }
+    return $output;
+  }
+
+  ###
+  # retrieves the speed of the unit for the current impulse
+  ###
+  # Args are:
+  # - (string) The time to examine, in 'turn.impulse' notation
+  # Returns:
+  # - (int) The last speed change
+  ###
   function getCurrentSpeed( $time )
   {
     $output = 0;
     $time = self::convertToImp( $time );
     if( $time === null )
     {
-      $this->error .= "Invalid time format in read(). Given '$time', Unit '".$this->name."'.\n";
+      $this->error .= "Invalid time format in ".self::class."->getCurrentSpeed(). Given '$time', Unit '".$this->name."'.\n";
       return NULL;
     }
     if( ! isset($this->impulses[$time]) )
     {
-      $this->error .= "Time given to getCurrentSpeed() is not recorded in the log file: Unit '".$this->name."', Turn ".self::convertFromImp($time)."\n";
+      $this->error .= "Time given to ".self::class."->getCurrentSpeed() is not recorded in the log file: Unit '".$this->name."', at $time\n";
       return NULL;
     }
     $input = $this->readAll();

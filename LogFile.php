@@ -73,7 +73,7 @@ class LogFile
       $log = explode( "\n", $log );
     else if( is_array( $log ) != true ) # if the log data is not an array or string, then exit
     {
-      $error .= "Input of ${self::CLASS} constructor is not a string or array.\n";
+      $error .= "Input of ".self::class." constructor is not a string or array.\n";
       return( 1 );
     }
 
@@ -139,7 +139,7 @@ class LogFile
   {
     if( ! isset( $this->UNIT_LOOKUP[ $name ] ) )
     {
-      $this->error .= " get_weapons(): Cannot find unit '$name' in list of units.\n";
+      $this->error .= " ".self::class."->get_weapons(): Cannot find unit '$name' in list of units.\n";
       return false;
     }
     $unitIndex = $this->UNIT_LOOKUP[ $name ];
@@ -380,7 +380,7 @@ class LogFile
   {
     if( ! isset( $this->UNIT_LOOKUP[ $unitName ] ) )
     {
-      $this->error .= $this->class."::readAll(): Cannot find unit '$unitName' in list of units.\n";
+      $this->error .= self::class."->readAll(): Cannot find unit '$unitName' in list of units.\n";
       return false;
     }
     $unitIndex = $this->UNIT_LOOKUP[ $unitName ];
