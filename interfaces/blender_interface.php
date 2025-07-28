@@ -97,13 +97,15 @@ $YOFFSET = 0;
 $CLIoptions = "";
 $CLIoptions .= "a::"; // adjust action animation time
 $CLIoptions .= "m::"; // adjust move animation time
+$CLIoptions .= "h"; // give command help
 $CLIoptions .= "q"; // quiet the command line
 $CLIoptions .= "x"; // remove action time for impulses without it
 $CLIlong = array(
   "action::",
   "move::",
-  "quiet",
+  "help",
   "no_action",
+  "quiet",
 );
 
 $CLI = getopt( $CLIoptions, $CLIlong, $rest_index );
@@ -115,6 +117,8 @@ if( isset($CLI["a"]) )
   $FRAMESPERACTION = (int) $CLI["a"];
 if( isset($CLI["action"]) )
   $FRAMESPERACTION = (int) $CLI["action"];
+if( isset($CLI["h"]) || isset($CLI["help"]) )
+  errorOut( "" );
 if( isset($CLI["m"]) )
   $FRAMESFORMOVE = (int) $CLI["m"];
 if( isset($CLI["move"]) )
@@ -710,7 +714,8 @@ function errorOut( $message )
 {
   global $argv, $FILESUFFIX, $FRAMESPERACTION, $FRAMESFORMOVE;
   echo "\n";
-  echo $message."\n\n";
+  if( $message !== null && $message != "" )
+    echo $message."\n\n";
   echo "Extract an SFBOL log file into a Blender script\n\n";
   echo "Called by:\n";
   echo "  ".$argv[0]." [OPTIONS..] /path/to/log\n";
@@ -719,6 +724,8 @@ function errorOut( $message )
   echo "OPTIONS:\n";
   echo "-a, --action\n";
   echo "   Change the frames per action-segment to this. Currently $FRAMESPERACTION frames.\n";
+  echo "-h, --help\n";
+  echo "   Give this help dialog.\n";
   echo "-m, --move\n";
   echo "   Change the frames per move-segment to this. Currently $FRAMESFORMOVE frames.\n";
   echo "-q, --quiet\n";
