@@ -385,14 +385,16 @@ for( $i=0; $i<=$LastLine; $i++ )
 #     [target] => Andy
 #     [weapon] => Phaser-1
 # ]
-          list( $XLoc, $YLoc ) = locationPixels( $action["owner location"] );
+          # Get the blender locations of the aggressor and defender
+          $targetLocation = $log->get_unit_location( $action["target"], $i );
 
           $output .= "# ".$action["owner"]." fires on ".$action["target"]."\n";
+          $output .= make_phaser( $action["owner location"], $targetLocation, $frame+$FRAMESFORMOVE+$FRAMESPERACTION );
 
           # Flag that we had impulse activity
           $flagWasActivity = true;
         }
-        else if( isset($action["total"]) )
+        else if( isset($action["total"]) ) # Receive damage
         {
 # $action [
 #     [internals] => 7
@@ -562,14 +564,14 @@ function keyframe_move( $unit, $X=null, $Y=null, $rotation="", $delay=0, $sudden
   {
     if( isset($X) && isset($Y) ) # do if movement is not missing
     {
-      $out .= "$unit.location = ($X, $Y, $Z)\n";
-      $out .= "$unit.keyframe_insert(data_path=\"location\", frame=0)\n";
+      $out .= "bpy.context.object.location = ($X, $Y, $Z)\n";
+      $out .= "bpy.context.object.keyframe_insert(data_path=\"location\", frame=0)\n";
     }
     # set the original rotation to the frame before movement starts
     if( $rotation != "" && $rotation <> 0 ) # skip if rotation is missing or is 0 degrees
     {
-      $out .= "$unit.rotation_euler = (0.0, 0.0, radians($rotation))\n";
-      $out .= "$unit.keyframe_insert(data_path=\"rotation_euler\", frame=0, index=2)\n";
+      $out .= "bpy.context.object.rotation_euler = (0.0, 0.0, radians($rotation))\n";
+      $out .= "bpy.context.object.keyframe_insert(data_path=\"rotation_euler\", frame=0, index=2)\n";
     }
   }
   # No movement animation but mark the previous location
@@ -577,21 +579,20 @@ function keyframe_move( $unit, $X=null, $Y=null, $rotation="", $delay=0, $sudden
   {
     if( isset($X) && isset($Y) ) # do if movement is not missing
     {
-      # post this at the end of movement.
-      $out .= "$unit.keyframe_insert(data_path=\"location\", frame=".($frame+$delay-1).")\n";
+      $out .= "bpy.context.object.keyframe_insert(data_path=\"location\", frame=".( $frame + $delay - 1 ).")\n";
       # set the location of the new impulse
-      $out .= "$unit.location = ($X, $Y, $Z)\n";
-      $out .= "$unit.keyframe_insert(data_path=\"location\", frame=".($frame+$delay).")\n";
+      $out .= "bpy.context.object.location = ($X, $Y, $Z)\n";
+      $out .= "bpy.context.object.keyframe_insert(data_path=\"location\", frame=".( $frame + $delay ).")\n";
     }
     # set the original rotation to the frame before movement starts
     if( $rotation != "" && $rotation <> 0 ) # skip if rotation is missing or is 0 degrees
     {
       # post this at the end of movement.
       $out .= "rotation = degrees($unit.rotation_euler[2]) + ($rotation)\n";
-      $out .= "$unit.keyframe_insert(data_path=\"rotation_euler\", frame=".($frame+$delay-1).", index=2)\n";
+      $out .= "bpy.context.object.keyframe_insert(data_path=\"rotation_euler\", frame=".( $frame + $delay - 1 ).", index=2)\n";
       # set the rotation of the new impulse
-      $out .= "$unit.rotation_euler = (0.0, 0.0, radians(rotation))\n";
-      $out .= "$unit.keyframe_insert(data_path=\"rotation_euler\", frame=".($frame+$delay).", index=2)\n";
+      $out .= "bpy.context.object.rotation_euler = (0.0, 0.0, radians(rotation))\n";
+      $out .= "bpy.context.object.keyframe_insert(data_path=\"rotation_euler\", frame=".( $frame + $delay ).", index=2)\n";
     }
   }
   # standard movement animation and mark the previous location
@@ -599,18 +600,18 @@ function keyframe_move( $unit, $X=null, $Y=null, $rotation="", $delay=0, $sudden
   {
     if( isset($X) && isset($Y) ) # Movement may be missing (TACs, HETs, etc)
     {
-      $out .= "$unit.keyframe_insert(data_path=\"location\", frame=".($frame+$delay-1).")\n";
+      $out .= "bpy.context.object.keyframe_insert(data_path=\"location\", frame=".( $frame + $delay - 1 ).")\n";
       # set the location of the new impulse
-      $out .= "$unit.location = ($X, $Y, $Z)\n";
-      $out .= "$unit.keyframe_insert(data_path=\"location\", frame=".($frame+$FRAMESFORMOVE+$delay).")\n";
+      $out .= "bpy.context.object.location = ($X, $Y, $Z)\n";
+      $out .= "bpy.context.object.keyframe_insert(data_path=\"location\", frame=".( $frame + $FRAMESFORMOVE + $delay ).")\n";
     }
     if( $rotation != "" && $rotation <> 0 ) # skip if rotation is missing or is 0 degrees
     {
       $out .= "rotation = degrees($unit.rotation_euler[2]) + ($rotation)\n";
-      $out .= "$unit.keyframe_insert(data_path=\"rotation_euler\", frame=".($frame+$delay-1).", index=2)\n";
+      $out .= "bpy.context.object.keyframe_insert(data_path=\"rotation_euler\", frame=".( $frame + $delay - 1 ).", index=2)\n";
       # set the rotation of the new impulse
-      $out .= "$unit.rotation_euler = (0.0, 0.0, radians(rotation))\n";
-      $out .= "$unit.keyframe_insert(data_path=\"rotation_euler\", frame=".($frame+$FRAMESFORMOVE+$delay).", index=2)\n";
+      $out .= "bpy.context.object.rotation_euler = (0.0, 0.0, radians(rotation))\n";
+      $out .= "bpy.context.object.keyframe_insert(data_path=\"rotation_euler\", frame=".( $frame + $FRAMESFORMOVE + $delay ).", index=2)\n";
     }
   }
 
@@ -631,7 +632,6 @@ function keyframe_move( $unit, $X=null, $Y=null, $rotation="", $delay=0, $sudden
 ###
 function card_set( $msg, $X, $Y, $time, $duration, $Z="3.0" )
 {
-  $offMapLocation = "0, 0, -8"; # Where to put the card when done
   $out = "";
 
   # Duplicate and select the card
@@ -643,18 +643,60 @@ function card_set( $msg, $X, $Y, $time, $duration, $Z="3.0" )
   $out .= "bpy.context.collection.objects.link(obj)\n";
 
   # set the message
-  $out .= "obj.modifiers[\"GeometryNodes\"][\"Socket_2\"] = \"$msg\"\n";
   $out .= "obj.data.update()\n";
   $out .= "obj.hide_render = False\n";
-  # Move the new card
+  # mark the off-map location
   $out .= "obj.keyframe_insert(data_path=\"location\", frame=".($time-1).")\n";
+  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $time + $duration + 1 ).")\n\n";
   # set the new location
   $out .= "obj.location = ($X, $Y, $Z)\n";
   $out .= "obj.keyframe_insert(data_path=\"location\", frame=$time)\n";
-  # remove after $time
+  # remove after $duration
   $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $time + $duration ).")\n";
-  $out .= "obj.location = ($offMapLocation)\n";
-  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $time + $duration + 1 ).")\n\n";
+
+  return $out;
+}
+
+###
+# Emits the python code to create a phaser beam between two hexes
+###
+# Args are:
+# - (string) The impulse being displayed, in either format
+# Returns:
+# - (string) The python code to affect the move and turn
+###
+function make_phaser( $ownerLocation, $targetLocation, $startFrame )
+{
+  global $FRAMESPERACTION;
+  $offMapLocation = "0, 0, -15"; # Where to put the phaser when done
+  $out = "";
+
+  list( $ownXLoc, $ownYLoc ) = locationPixels( $ownerLocation );
+  list( $targXLoc, $targYLoc ) = locationPixels( $targetLocation );
+
+  # Figure the parts of a cylinder between the aggressor and defender
+  $dx = $targXLoc - $ownXLoc;
+  $dy = $targYLoc - $ownYLoc;
+  $dz = 1.2;
+  $rad = 0.03;
+  $dist = round( sqrt( $dx^2 + $dy^2 ), 4 );
+  $phi = round( atan2( $dy, $dx ), 4 );
+
+  # draw a cylinder between the aggressor and defender
+  $out .= "bpy.ops.mesh.primitive_cylinder_add( radius = $rad, depth = $dist, ";
+  $out .= "location = (".( $dx/2 + $ownXLoc ).", ".( $dy/2 + $ownYLoc ).", $dz ) )\n";
+  $out .= "bpy.context.object.rotation_euler = ( $phi, -1.5708, 0 )\n";
+  # mark this frame as the start of showing the phaser
+  $out .= "bpy.context.object.keyframe_insert(data_path=\"location\", frame=$startFrame)\n";
+  # mark the duration to show the phaser
+  $out .= "bpy.context.object.keyframe_insert(data_path=\"location\", frame=".( $startFrame + $FRAMESPERACTION ).")\n";
+  # mark the hiding place of the phaser
+  $out .= "bpy.context.object.location = ($offMapLocation)\n";
+  $out .= "bpy.context.object.keyframe_insert(data_path=\"location\", frame=".( $startFrame - 1 ).")\n";
+  $out .= "bpy.context.object.keyframe_insert(data_path=\"location\", frame=".( $startFrame + $FRAMESPERACTION + 1 ).")\n\n";
+###
+# Add texture to phaser, here
+###
 
   return $out;
 }

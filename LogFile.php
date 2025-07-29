@@ -128,22 +128,39 @@ class LogFile
   }
 
   ###
-  # Shows all of the weapons that have been fired, by the named unit
+  # Retrieve a unit's location
   ###
   # Args are:
-  # - (string) The name of the unit, as found in the reverse lookup
+  # - (string) The name of the unit to examine
+  # - (string) The time to examine, in 'turn.impulse' notation
   # Returns:
-  # - (array) collection of weapons in the format [] = array( [weapon],[number],[arc] )
+  # - (string) The last location change
   ###
-  function get_weapons( $name )
+  function get_unit_location( $unitName, $time )
   {
-    if( ! isset( $this->UNIT_LOOKUP[ $name ] ) )
-    {
-      $this->error .= " ".self::class."->get_weapons(): Cannot find unit '$name' in list of units.\n";
-      return false;
-    }
-    $unitIndex = $this->UNIT_LOOKUP[ $name ];
-    return $this->UNITS[ $unitIndex ]->weapons;
+    $lookup = $this->UNIT_LOOKUP[ $unitName ];
+    $unit = $this->UNITS[ $lookup ];
+    $location = $unit->getCurrentLocation( $time );
+    return $location;
+  }
+  ###
+  # Shows all sequence constants
+  ###
+  # Args are:
+  # - None
+  # Returns:
+  # - (array) A list of the constants
+  ###
+  function get_sequence ()
+  {
+    $output = array();
+    $fooClass = new ReflectionClass ( $this::class );
+    $constants = $fooClass->getConstants();
+
+    foreach ( $constants as $name => $value )
+      if( str_starts_with( $name, "SEQUENCE_" ) )
+        $output[ $value ] = $name;
+    return $output;
   }
 
   ###
@@ -161,11 +178,30 @@ class LogFile
       $output[] = array(
         "added"=> $this->UNITS[ $value ]->added,
         "basic"=> $this->UNITS[ $value ]->basicType,
-        "name"=>$unit,
+        "name"=> $this->UNITS[ $value ]->name,
         "removed"=> $this->UNITS[ $value ]->removed,
         "type"=> $this->UNITS[ $value ]->type
       );
     return $output;
+  }
+
+  ###
+  # Shows all of the weapons that have been fired, by the named unit
+  ###
+  # Args are:
+  # - (string) The name of the unit, as found in the reverse lookup
+  # Returns:
+  # - (array) collection of weapons in the format [] = array( [weapon],[number],[arc] )
+  ###
+  function get_weapons( $name )
+  {
+    if( ! isset( $this->UNIT_LOOKUP[ $name ] ) )
+    {
+      $this->error .= " ".self::class."->get_weapons(): Cannot find unit '$name' in list of units.\n";
+      return false;
+    }
+    $unitIndex = $this->UNIT_LOOKUP[ $name ];
+    return $this->UNITS[ $unitIndex ]->weapons;
   }
 
   ###
@@ -385,26 +421,6 @@ class LogFile
     }
     $unitIndex = $this->UNIT_LOOKUP[ $unitName ];
     return $this->UNITS[ $unitIndex ]->readAll();
-  }
-
-  ###
-  # Shows all sequence constants
-  ###
-  # Args are:
-  # - None
-  # Returns:
-  # - (array) A list of the constants
-  ###
-  function get_sequence ()
-  {
-    $output = array();
-    $fooClass = new ReflectionClass ( $this::class );
-    $constants = $fooClass->getConstants();
-
-    foreach ( $constants as $name => $value )
-      if( str_starts_with( $name, "SEQUENCE_" ) )
-        $output[ $value ] = $name;
-    return $output;
   }
 }
 

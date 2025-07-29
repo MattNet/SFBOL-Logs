@@ -455,7 +455,7 @@ class LogUnit
   # Args are:
   # - (string) The time to examine, in 'turn.impulse' notation
   # Returns:
-  # - (int) The last speed change
+  # - (string) The last location change
   ###
   function getCurrentLocation( $time )
   {
@@ -466,12 +466,12 @@ class LogUnit
       $this->error .= "Invalid time format in ".self::class."->getCurrentLocation(). Given '$time', Unit '".$this->name."'.\n";
       return NULL;
     }
-//var_dump($time);
     if( ! isset($this->impulses[$time]) )
     {
       $this->error .= "Time given to ".self::class."->getCurrentLocation() is not recorded in the log file: Unit '".$this->name."', at $time\n";
       return NULL;
     }
+
     $input = $this->readAll();
     foreach( $input as $impulse=>$actions )
     {
