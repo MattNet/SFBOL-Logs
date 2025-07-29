@@ -3,17 +3,25 @@ This script is then opened in Blender and run. It will duplicate the units used,
 
 # Usage
 ```
-$ ./blender_interface.php ../test_files/test-Gor_TKR.log 
+$ ./blender_interface.php -h ../test_files/test-Gor_TKR.log 
 
-###
-Debug Info:
-###
-Animation length: 2275 frames
-Unit List:
-Array
-(
-...
-)
+Extract an SFBOL log file into a Blender script
+
+Called by:
+  ./blender_interface.php [OPTIONS..] /path/to/log
+  Creates/overwrites a file appended with '.py'
+
+OPTIONS:
+-a, --action
+   Change the frames per action-segment to this. Currently 12 frames.
+-h, --help
+   Give this help dialog.
+-m, --move
+   Change the frames per move-segment to this. Currently 12 frames.
+-q, --quiet
+   On success, do not print anything to the terminal.
+-x, --no_action
+   Remove the wait time for any impulses where there is no action to animate.
 ```
 
 ```
