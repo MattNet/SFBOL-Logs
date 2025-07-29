@@ -3,7 +3,7 @@ This script is then opened in Blender and run. It will duplicate the units used,
 
 # Usage
 ```
-$ ./blender_interface.php -h ../test_files/test-Gor_TKR.log 
+$ ./blender_interface.php -h -a24 ../test_files/test-Gor_TKR.log 
 
 Extract an SFBOL log file into a Blender script
 
@@ -13,7 +13,7 @@ Called by:
 
 OPTIONS:
 -a, --action
-   Change the frames per action-segment to this. Currently 12 frames.
+   Change the frames per action-segment to this. Currently 24 frames.
 -h, --help
    Give this help dialog.
 -m, --move
@@ -30,10 +30,10 @@ import mathutils
 from mathutils import *; from math import *
 
 #####
-# Impulses are 36 frames long.
+# Impulses are 60 frames long.
 # - Movement takes 12 frames.
-# - Early-impulse actions are animated for 12 frames.
-# - Weapons fire is animated for 12 frames.
+# - Early-impulse actions are animated for 24 frames.
+# - Weapons fire is animated for 24 frames.
 #####
 
 for obj in bpy.data.objects:
@@ -79,7 +79,7 @@ bpy.data.objects['liard'].keyframe_insert(data_path="location", frame=0)
 bpy.data.objects['liard'].rotation_euler = (0.0, 0.0, radians(0))
 bpy.data.objects['liard'].keyframe_insert(data_path="rotation_euler", frame=0, index=2)
 
-# Start of impulse 1.1, animation frame 35
+# Start of impulse 1.1, animation frame 59
 
 ...
 ```
