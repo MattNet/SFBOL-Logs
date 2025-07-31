@@ -145,6 +145,7 @@ if( $NOANIMATION )
   $output .= "# - Impulses with no activity will skip the activity segment.";
 $output .= "\n#####\n\n";
 $output .= "for obj in bpy.data.objects:\n   obj.select_set(False)\n";
+$phaserMaterial = "Phaser Blast"; # Blender name of the texture to give the weapon blast
 $readFile = $CLIend[0];
 $Ships = array();
 $ShipsFacings = array(); # track the unit facing before the current move
@@ -220,8 +221,18 @@ foreach( $unitCache as &$entry )
   $output .= "obj = bpy.data.objects['$active_object'].copy()\n";
   $output .= "bpy.context.collection.objects.link(obj)\n";
   $output .= "obj.name = '".$entry["name"]."'\n";
-  $output .= "obj.hide_render = False\n";
+  $output .= "obj.hide_render = False\n\n";
 }
+
+# Create the phaser weapon-fire texture
+$output .= "# Phaser weapon-fire texture\n";
+$output .= "Phaser_Material = bpy.data.materials.new(name=\"$phaserMaterial\")\n";
+$output .= "Phaser_Material.use_nodes = True\n";
+$output .= "Phaser_nodes = Phaser_Material.node_tree.nodes\n";
+$output .= "Phaser_links = Phaser_Material.node_tree.links\n";
+$output .= "Phaser_nodes[\"Principled BSDF\"].inputs[0].default_value = (1, 0, 0, 1)\n";
+$output .= "Phaser_nodes[\"Principled BSDF\"].inputs[26].default_value = (1, 0, 0, 1)\n";
+$output .= "Phaser_nodes[\"Principled BSDF\"].inputs[27].default_value = 2\n\n";
 
 # go through each impulse
 for( $i=0; $i<=$LastLine; $i++ )
@@ -233,7 +244,7 @@ for( $i=0; $i<=$LastLine; $i++ )
 
   $output .= "# Start of impulse ".LogUnit::convertFromImp( $i ).", animation frame $frame\n\n";
 
-//  $output .= impulse_display( $i );
+//  $output .= impulse_display( $i ); # Update the incrementing time display
 
   # skip if nothing happened here
   if( empty($impulseActivity) )
@@ -643,6 +654,7 @@ function card_set( $msg, $X, $Y, $time, $duration, $Z="3.0" )
   $out .= "bpy.context.collection.objects.link(obj)\n";
 
   # set the message
+  $out .= "obj.modifiers[\"GeometryNodes\"][\"Socket_2\"] = \"$msg\"\n";
   $out .= "obj.data.update()\n";
   $out .= "obj.hide_render = False\n";
   # mark the off-map location
@@ -667,9 +679,10 @@ function card_set( $msg, $X, $Y, $time, $duration, $Z="3.0" )
 ###
 function make_phaser( $ownerLocation, $targetLocation, $startFrame )
 {
-  global $FRAMESPERACTION;
+  global $FRAMESPERACTION, $phaserMaterial;
   $offMapLocation = "0, 0, -15"; # Where to put the phaser when done
   $out = "";
+  $weaponMaterial = "Phaser Blast"; # Blender name of the texture to give the weapon blast
 
   list( $ownXLoc, $ownYLoc ) = locationPixels( $ownerLocation );
   list( $targXLoc, $targYLoc ) = locationPixels( $targetLocation );
@@ -693,10 +706,10 @@ function make_phaser( $ownerLocation, $targetLocation, $startFrame )
   # mark the hiding place of the phaser
   $out .= "bpy.context.object.location = ($offMapLocation)\n";
   $out .= "bpy.context.object.keyframe_insert(data_path=\"location\", frame=".( $startFrame - 1 ).")\n";
-  $out .= "bpy.context.object.keyframe_insert(data_path=\"location\", frame=".( $startFrame + $FRAMESPERACTION + 1 ).")\n\n";
-###
-# Add texture to phaser, here
-###
+  $out .= "bpy.context.object.keyframe_insert(data_path=\"location\", frame=".( $startFrame + $FRAMESPERACTION + 1 ).")\n";
+
+  # Add texture to phaser
+  $out .= "bpy.context.object.data.materials.append(bpy.data.materials.get(\"$weaponMaterial\"))\n";
 
   return $out;
 }
