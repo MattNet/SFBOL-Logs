@@ -47,7 +47,7 @@ define( 'MODEL_NAME', array(
 # Expendables
   'Andromedan Mine' => array( "name" => 'Mine', 'no_rotate' => true ),
   'Archeo-Tholian Web' => array( "name" => 'Web', 'no_rotate' => true ),
-  'Archeo-Tholian Shuttle' => array( "name" => 'Shuttle', 'no_rotate' => false ),
+  'Archeo-Tholian Shuttle' => array( "name" => 'Federation Shuttle', 'no_rotate' => false ),
   'Fed Drone' => array( "name" => 'Drone', 'no_rotate' => false ),
   'Fed Shuttle' => array( "name" => 'Federation Shuttle', 'no_rotate' => false ),
   'Frax Drone' => array( "name" => 'Drone', 'no_rotate' => false ),
@@ -526,8 +526,8 @@ function locationPixels( $loc )
   if( $x % 2 == 0 )
     $hexVertBump = ($YHEXSIZE / 2); # even-numbered columns are vertically offset by half a hex      
 
-  $xLoc = ( ($x * $XHEXSIZE) + $XOFFSET - $XHEXSIZE);
-  $yLoc = ( ($y * $YHEXSIZE) + $YOFFSET - $YHEXSIZE + $hexVertBump);
+  $xLoc = round( ($x * $XHEXSIZE) + $XOFFSET - $XHEXSIZE, 4);
+  $yLoc = round( ($y * $YHEXSIZE) + $YOFFSET - $YHEXSIZE + $hexVertBump, 4);
 
   return array( $xLoc, $yLoc );
 }
@@ -679,7 +679,7 @@ function make_phaser( $ownerLocation, $targetLocation, $startFrame )
   $dy = $targYLoc - $ownYLoc;
   $dz = 1.2;
   $rad = 0.03;
-  $dist = round( sqrt( $dx^2 + $dy^2 ), 4 );
+  $dist = round( sqrt( $dx**2 + $dy**2 ), 4 );
   $phi = round( atan2( $dy, $dx ), 4 );
 
   # draw a cylinder between the aggressor and defender
