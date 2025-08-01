@@ -124,5 +124,6 @@ Within blender, render each frame of the scene. This will create a series of sti
 ## Create the video.
 
 Once all of the images have been rendered, they can be collected into a video. Your software of choice may vary from mine. My preference is to use [FFMPEG](https://en.wikipedia.org/wiki/FFmpeg):
-```$ ffmpeg -f image2 -framerate 24 -pattern_type glob -i $RENDER_DIR/'*.png' -an output.mp4
+```
+$ ffmpeg -f image2 -framerate 24 -pattern_type glob -i $RENDER_DIR/'*.png' -an output.mp4
 ```
