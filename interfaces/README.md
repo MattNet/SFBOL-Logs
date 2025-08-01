@@ -31,7 +31,8 @@ BumpyHead (Type:Klingon TD7C) has been added at 2530, direction A, speed 0
 Neonpico has started Energy Allocation
 Eric_the_Silent has started Energy Allocation
 Neonpico has finished Energy Allocation
-...```
+...
+```
 
 ## Usage of this script
 Having identified the script to convert, execute this script to convert the logfile into a Blender script.
@@ -55,7 +56,8 @@ OPTIONS:
 -x, --no_action
    Remove the wait time for any impulses where there is no action to animate.
 
-$ ./blender_interface.php -a24 ../test_files/test-Gor_TKR.log```
+$ ./blender_interface.php -a24 ../test_files/test-Gor_TKR.log
+```
 
 It will generate a python script very similar to the following:
 
@@ -103,7 +105,8 @@ bpy.data.objects['liard'].keyframe_insert(data_path="rotation_euler", frame=0, i
 
 # Start of impulse 1.1, animation frame 59
 
-...```
+...
+```
 
 ## Run inside of Blender
 
@@ -121,4 +124,5 @@ Within blender, render each frame of the scene. This will create a series of sti
 ## Create the video.
 
 Once all of the images have been rendered, they can be collected into a video. Your software of choice may vary from mine. My preference is to use [FFMPEG](https://en.wikipedia.org/wiki/FFmpeg):
-```$ ffmpeg -f image2 -framerate 24 -pattern_type glob -i $RENDER_DIR/'*.png' -an output.mp4```
+```$ ffmpeg -f image2 -framerate 24 -pattern_type glob -i $RENDER_DIR/'*.png' -an output.mp4
+```
