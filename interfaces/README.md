@@ -12,7 +12,8 @@ The basic program flow is thus:
 
 ## The Game Logfile
 The SFB Online log file is usally found in the 'log' directory off of the program root directory. These files are text files with the '.log' extension. They are the contents of the chat window of a SFBonline game. The below serves as an example for a Linux system.
-```~$ cd .sfu_online_client/log/
+```
+~$ cd .sfu_online_client/log/
 ~/.sfu_online_client/log$ ls
 AWJohnson.log                        SFBCadet_Game5.log
  Eric_the_Silent.log                 SFB_Game1.log
@@ -36,7 +37,8 @@ Neonpico has finished Energy Allocation
 
 ## Usage of this script
 Having identified the script to convert, execute this script to convert the logfile into a Blender script.
-```$ ./blender_interface.php -h -a24
+```
+$ ./blender_interface.php -h -a24
 
 Extract an SFBOL log file into a Blender script
 
@@ -61,7 +63,8 @@ $ ./blender_interface.php -a24 ../test_files/test-Gor_TKR.log
 
 It will generate a python script very similar to the following:
 
-```import bpy
+```
+import bpy
 import mathutils
 from mathutils import *; from math import *
 
