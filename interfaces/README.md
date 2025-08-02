@@ -21,7 +21,7 @@ AWJohnson.log                        SFBCadet_Game5.log
  Neonpico.log                        SFB_Tom_v_Matt.log
  SFB_500-Tourney-Feds-vs-Selts.log   SFBTourn_Matt_v_Tom.log
  SFB_Bullpen.log                     Tokimonsta.log
-~/.sfu_online_client/log$ head SFBTourn_Matt_v_Tom.log 
+~/.sfu_online_client/log$ cat SFBTourn_Matt_v_Tom.log 
 ---There is no topic for #SFBTourn_Matt_v_Tom.
 ---Eric_the_Silent joined the channel.
 Rocky (Type:Archeo-Tholian TCC) has been added at 1701, direction D, speed 0

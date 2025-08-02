@@ -256,12 +256,11 @@ for( $i=0; $i<=$LastLine; $i++ )
   foreach( $impulseActivity as $sequence=>$actionSet )
   {
 
-# movement items
     if( $sequence <= LogFile::SEQUENCE_MOVEMENT_TAC )
     {
       foreach( $actionSet as $action )
       {
-      # Change location
+# Change location
         if( isset($action["location"]) )
         {
         # a movement order
@@ -272,15 +271,18 @@ for( $i=0; $i<=$LastLine; $i++ )
 #     [turn] => side-slip
 # ]
           list( $XLoc, $YLoc ) = locationPixels( $action["location"] );
+          $rot = 0;
 
-          $output .= "# Move ".$action["owner"]."\n";
           # if the unit never turns, skip determining rotation amount
           if( ! $unitList[ $action["owner"] ]["no_rotate"] )
             $rot = rotation($ShipsFacings[ $action["owner"] ], $action["facing"]);
+
+          $output .= "# Move ".$action["owner"]."\n";
+
           $output .= keyframe_move( $unitList[ $action["owner"] ]["blender"], $XLoc, $YLoc, $rot );
           $ShipsFacings[ $action["owner"] ] = $action["facing"];
         }
-      # Change facing
+# Change facing
         # if the facing changes between old and new facing
         else if( $ShipsFacings[ $action["owner"] ] != $action["facing"] && ! $unitList[ $action["owner"] ]["no_rotate"] )
         {
@@ -300,9 +302,9 @@ for( $i=0; $i<=$LastLine; $i++ )
         }
       }
     }
-# Launch items
     else if( $sequence < LogFile::SEQUENCE_DIS_DEV_DECLARATION )
     {
+# Launch items
       foreach( $actionSet as $action )
       {
       # if we are adding an unit to the map
@@ -340,7 +342,7 @@ for( $i=0; $i<=$LastLine; $i++ )
           # Flag that we had impulse activity
           $flagWasActivity = true;
          }
-      # if we are tractoring a unit
+# if we are tractoring a unit
         if( $sequence == LogFile::SEQUENCE_TRACTORS )
         {
 # $action [
@@ -349,28 +351,27 @@ for( $i=0; $i<=$LastLine; $i++ )
 #     [target] => D013(C).2.25
 #     [tractorup] => 79
 # ]
-          list( $XLoc, $YLoc ) = locationPixels( $action["owner location"] );
+          # Get the blender locations of the aggressor and defender
+          $targetLocation = $log->get_unit_location( $action["target"], $i );
 
           $output .= "# ".$action["owner"]." tractors ".$action["target"]."\n";
+          $output .= make_tractor( $action["owner location"], $targetLocation, $frame+$FRAMESFORMOVE );
 
           # Announce the action
           $output .= card_set( "Tractor", $XLoc, $YLoc, $frame+$FRAMESFORMOVE, $FRAMESPERACTION );
 
-//          output .= "bpy.ops.mesh.primative_cone_add()\n";
-
           # Flag that we had impulse activity
           $flagWasActivity = true;
         }
-      # if we are cloaking a unit
+# if we are cloaking a unit
         if( $sequence == LogFile::SEQUENCE_CLOAKING_DEVICE )
         {
 # $action [
 #     [owner] => Dancer
 #     [owner location] => 1234
 # ]
-          list( $XLoc, $YLoc ) = locationPixels( $action["owner location"] );
-
           $output .= "# ".$action["owner"]." cloaks\n";
+          $output .= make_cloak( $action["owner location"], $frame+$FRAMESFORMOVE );
 
           # Announce the action
           $output .= card_set( "Cloak", $XLoc, $YLoc, $frame+$FRAMESFORMOVE, $FRAMESPERACTION );
@@ -385,7 +386,42 @@ for( $i=0; $i<=$LastLine; $i++ )
     {
       foreach( $actionSet as $action )
       {
-        if( isset($action["weapon"]) )
+        if( $sequence == LogFile::SEQUENCE_CAST_WEB )
+        {
+# $action [
+#     [add] => 29
+#     [facing] => A
+#     [location] => 2823
+#     [owner] => web-1.29-1
+#     [speed] => 0
+#     [type] => Archeo-Tholian Web
+# ]
+# $action [
+#     [add] => 29
+#     [owner] => web-1.29-1
+#     [remove] => 110
+#     [type] => Archeo-Tholian Web
+# ]
+          if( isset( $action["remove"] ) && $action["remove"] == $i ) # web is being removed
+          {
+            $output .= "# Remove web\n";
+
+            # Set the initial location
+            $output .= keyframe_move( $unitList[ $action["owner"] ]["blender"], 0, 0, 0, $FRAMESFORMOVE+$FRAMESPERACTION, true, -12 );
+          }
+          else # web is being added
+          {
+            $output .= "# Create web\n";
+
+            # Set the initial location
+            list( $XLoc, $YLoc ) = locationPixels( $action["location"] );
+            $output .= keyframe_move( $unitList[ $action["owner"] ]["blender"], $XLoc, $YLoc, $rot, $FRAMESFORMOVE+$FRAMESPERACTION, true );
+          }
+
+          # Flag that we had impulse activity
+          $flagWasActivity = true;
+        }
+        else if( isset($action["weapon"]) )
         {
 # $action [
 #     [arc] => LS
@@ -396,6 +432,10 @@ for( $i=0; $i<=$LastLine; $i++ )
 #     [target] => Andy
 #     [weapon] => Phaser-1
 # ]
+          # Exclude non-weapons fire: web, etc
+          if( $action["weapon"] == "Web Caster" )
+            break;
+
           # Get the blender locations of the aggressor and defender
           $targetLocation = $log->get_unit_location( $action["target"], $i );
 
@@ -405,7 +445,8 @@ for( $i=0; $i<=$LastLine; $i++ )
           # Flag that we had impulse activity
           $flagWasActivity = true;
         }
-        else if( isset($action["total"]) ) # Receive damage
+# Receive damage
+        else if( isset($action["total"]) )
         {
 # $action [
 #     [internals] => 7
@@ -458,7 +499,6 @@ for( $i=0; $i<=$LastLine; $i++ )
 # This is assuredly too large if $NOANIMATION is true
 $output .= "bpy.context.scene.frame_end = $frameIncrement\n";
 $output .= "bpy.context.scene.frame_set(0)\n";
-
 
 if( ! isset($CLI["q"]) && ! isset($CLI["quiet"]) )
 {
@@ -557,7 +597,7 @@ function locationPixels( $loc )
 # Returns:
 # - (string) The python code to affect the move and turn
 ###
-function keyframe_move( $unit, $X=null, $Y=null, $rotation="", $delay=0, $suddenMove=FALSE, $Z="0.0" )
+function keyframe_move( $unit, $X=null, $Y=null, $rotation=0, $delay=0, $suddenMove=FALSE, $Z="0.0" )
 {
   global $frame, $FRAMESFORMOVE;
   $out = "";
@@ -670,19 +710,33 @@ function card_set( $msg, $X, $Y, $time, $duration, $Z="3.0" )
 }
 
 ###
+# Emits the python code to create a cloak effect
+###
+# Args are:
+# - (string) The location of the cloaking unit, in [row][column] format
+# - (string) The blender frame to begin
+# Returns:
+# - (string) The python code to create the phaser object and show it for the impulse
+###
+function make_cloak( $ownerLocation, $startFrame )
+{
+}
+
+###
 # Emits the python code to create a phaser beam between two hexes
 ###
 # Args are:
-# - (string) The impulse being displayed, in either format
+# - (string) The location of the aggressor, in [row][column] format
+# - (string) The location of the defender, in [row][column] format
+# - (string) The blender frame to begin
 # Returns:
-# - (string) The python code to affect the move and turn
+# - (string) The python code to create the phaser object and show it for the impulse
 ###
 function make_phaser( $ownerLocation, $targetLocation, $startFrame )
 {
   global $FRAMESPERACTION, $phaserMaterial;
   $offMapLocation = "0, 0, -15"; # Where to put the phaser when done
   $out = "";
-  $weaponMaterial = "Phaser Blast"; # Blender name of the texture to give the weapon blast
 
   list( $ownXLoc, $ownYLoc ) = locationPixels( $ownerLocation );
   list( $targXLoc, $targYLoc ) = locationPixels( $targetLocation );
@@ -709,9 +763,23 @@ function make_phaser( $ownerLocation, $targetLocation, $startFrame )
   $out .= "bpy.context.object.keyframe_insert(data_path=\"location\", frame=".( $startFrame + $FRAMESPERACTION + 1 ).")\n";
 
   # Add texture to phaser
-  $out .= "bpy.context.object.data.materials.append(bpy.data.materials.get(\"$weaponMaterial\"))\n";
+  $out .= "bpy.context.object.data.materials.append(bpy.data.materials.get(\"$phaserMaterial\"))\n";
 
   return $out;
+}
+
+###
+# Emits the python code to create a tractor beam between two hexes
+###
+# Args are:
+# - (string) The location of the aggressor, in [row][column] format
+# - (string) The location of the defender, in [row][column] format
+# - (string) The blender frame to begin
+# Returns:
+# - (string) The python code to create the tractor object and show it, starting on the impulse
+###
+function make_tractor( $ownerLocation, $targetLocation, $startFrame )
+{
 }
 
 ###

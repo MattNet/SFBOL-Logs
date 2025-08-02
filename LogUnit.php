@@ -115,7 +115,7 @@ class LogUnit
         # fill out the object and tag information
         $this->added = $this->pointerTime;
         $this->basicType = self::get_basic_type( $this->type );
-        $output = array( "Add"=>$this->pointerTime, "facing"=>"A", "location"=>$location, "speed"=>0, "type"=>$this->type, "owner"=>$this->name );
+        $output = array( "add"=>$this->pointerTime, "facing"=>"A", "location"=>$location, "speed"=>0, "type"=>$this->type, "owner"=>$this->name );
         if( isset($matches[4]) )
           $output["facing"] = $matches[4];
         if( isset($matches[5]) )

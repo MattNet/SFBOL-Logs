@@ -286,7 +286,7 @@ class LogFile
         case "facing":
         case "location":
           # place units that are added
-          if( isset($value[1]) && ( $value[1] == "Launch" || $value[1] == "Add" ) )
+          if( isset($value[1]) && ( $value[1] == "Launch" || $value[1] == "add" ) )
           {
             switch( $unit->basicType )
             {
