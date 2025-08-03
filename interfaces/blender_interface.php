@@ -503,10 +503,9 @@ $output .= "bpy.context.scene.frame_set(0)\n";
 if( ! isset($CLI["q"]) && ! isset($CLI["quiet"]) )
 {
   echo "###\nDebug Info:\n###\n";
-  echo "Animation length: $frameIncrement frames, ".floor( $frameIncrement / 24 )." seconds, lasts until T".LogUnit::convertFromImp( $LastLine )."\n";
   echo "Unit List:\n";
   print_r( $unitList );
-  echo "\n";
+  echo "Animation length: $frameIncrement frames, ".floor( $frameIncrement / 24 )." seconds, lasts until T".LogUnit::convertFromImp( $LastLine )."\n\n";
 }
 
 # write the new file

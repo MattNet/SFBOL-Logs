@@ -485,8 +485,11 @@ class LogUnit
     {
       if( $time < $impulse )
         break;
-      if( isset( $actions["location"] ) )
-        $output = $actions["location"]["location"];
+      foreach( $actions as $type )
+      {
+        if( isset( $type["location"] ) )
+          $output = $type["location"];
+      }
     }
     return $output;
   }
