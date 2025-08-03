@@ -699,12 +699,12 @@ function card_set( $msg, $X, $Y, $time, $duration, $Z="3.0" )
   $out .= "obj.hide_render = False\n";
   # mark the off-map location
   $out .= "obj.keyframe_insert(data_path=\"location\", frame=".($time-1).")\n";
-  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $time + $duration + 1 ).")\n\n";
+  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $time + $duration + 1 ).")\n";
   # set the new location
   $out .= "obj.location = ($X, $Y, $Z)\n";
   $out .= "obj.keyframe_insert(data_path=\"location\", frame=$time)\n";
   # remove after $duration
-  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $time + $duration ).")\n";
+  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $time + $duration ).")\n\n";
 
   return $out;
 }

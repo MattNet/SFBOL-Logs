@@ -116,7 +116,7 @@ bpy.data.objects['liard'].keyframe_insert(data_path="rotation_euler", frame=0, i
 The python script then needs to be imported into Blender and run. It will duplicate the models used in during the game, generate the needed keyframes, and basically set up the scene for rendering (minus any lighting or camera work.)
 
 To import a python script, select from the 'Editor Type' the 'Text Editor' screen. Then use the 'Open' button to select the script. The contents of your script should show in the text editor window. Then use the play button (known as 'Run Script') to generate the scene.
-![Import script in Blender][interfaces/README1.png]
+![Import script in Blender](/interfaces/README1.png)
 
 At this point the user needs to modify the scene for camera, lighting, and to fix any errors in the chat log that got transferred into the scene.
 

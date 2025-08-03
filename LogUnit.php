@@ -120,6 +120,8 @@ class LogUnit
           $output["facing"] = $matches[4];
         if( isset($matches[5]) )
           $output["speed"] = intval($matches[5]);
+        $this->lastLocation = $location; # update the latest location
+        $this->pointerSpeed = $output["speed"]; # update the latest speed
 
         # add the tag information to the impulse
         if( ! isset($this->impulses[ $this->pointerTime ]) )
@@ -192,7 +194,7 @@ class LogUnit
           $reason = $moves; # set to the number of movement since the last turn if not a HET or TAC
 
         # fill out the object and tag information
-        $output = array( "facing"=>$newFacing, "owner"=>$this->name, "turn"=>$reason );
+        $output = array( "facing"=>$newFacing, "owner"=>$this->name, "speed"=>$this->pointerSpeed, "turn"=>$reason );
         $this->pointerFacing = $newFacing; # set pointerFacing after the HET check
 
         # add the tag information to the impulse
@@ -220,16 +222,22 @@ class LogUnit
         }
 
         # fill out the object and tag information
-        $output = array( "facing"=>$facing, "location"=>$location, "owner"=>$this->name, "turn"=>$reason );
+        $output = array( "facing"=>$facing, "location"=>$location, "owner"=>$this->name, "speed"=>$this->pointerSpeed, "turn"=>$reason );
         $this->pointerFacing = $facing; # set pointerFacing after the HET check
+        $this->lastLocation = $location; # update the latest location
+
+        # An exception to moving:
+        # If moved on the same impulse as added, then update the add to the new location. Do not move the unit.
+        if( isset( $this->impulses[ $this->pointerTime ]["add"] ) )
+        {
+          $this->impulses[ $this->pointerTime ]["add"]["location"] = $location;
+          continue; # skip the normal movement output
+        }
 
         # add the tag information to the impulse
         if( ! isset($this->impulses[ $this->pointerTime ]) )
           $this->impulses[ $this->pointerTime ] = array();
         $this->impulses[ $this->pointerTime ]["location"] = $output;
-
-        # update the latest location
-        $this->lastLocation = $location;
 
         continue; # Go to next line if the LOCATIONREGEX matched
       }
@@ -510,8 +518,11 @@ class LogUnit
     {
       if( $time < $impulse )
         break;
-      if( isset( $actions["speed"] ) )
-        $output = $actions["speed"];
+      foreach( $actions as $type )
+      {
+        if( isset( $type["speed"] ) )
+          $output = $type["speed"];
+      }
     }
     return $output;
   }
