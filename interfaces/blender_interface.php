@@ -144,7 +144,7 @@ $output .= "# - Weapons fire is animated for $FRAMESPERACTION frames.";
 if( $NOANIMATION )
   $output .= "# - Impulses with no activity will skip the activity segment.";
 $output .= "\n#####\n\n";
-$output .= "for obj in bpy.data.objects:\n   obj.select_set(False)\n";
+$output .= "for obj in bpy.data.objects:\n   obj.select_set(False)\n\n";
 $phaserMaterial = "Phaser Blast"; # Blender name of the texture to give the weapon blast
 $readFile = $CLIend[0];
 $Ships = array();
@@ -215,13 +215,10 @@ foreach( $unitCache as &$entry )
     $LastLine = $entry["removed"];
 
 # duplicate templated items in Blender to create named items to be moved
-  $active_object = MODEL_NAME[$entry["type"]]["name"];
-  # select the $entry item and make active
-  $output .= "bpy.context.view_layer.objects.active = bpy.data.objects['$active_object']\n";
-  $output .= "obj = bpy.data.objects['$active_object'].copy()\n";
-  $output .= "bpy.context.collection.objects.link(obj)\n";
+  $output .= blender_duplicate( MODEL_NAME[$entry["type"]]["name"] );
   $output .= "obj.name = '".$entry["name"]."'\n";
-  $output .= "obj.hide_render = False\n\n";
+  $output .= "obj.hide_render = False\n";
+  $output .= "obj.select_set(False)\n\n";
 }
 
 # Create the phaser weapon-fire texture
@@ -665,7 +662,31 @@ function keyframe_move( $unit, $X=null, $Y=null, $rotation=0, $delay=0, $suddenM
     }
   }
 
-  return $out."\n";
+  $out .= "$unit.select_set(False)\n\n";
+
+  return $out;
+}
+
+###
+# Emits the python code needed to duplicate the named model
+# Leaves the duplicate model ready to be acted on (e.g. is selected)
+###
+# Args are:
+# - (string) The model name in blender
+# Returns:
+# - (string) The python code to create the second model
+###
+function blender_duplicate( $modelName )
+{
+  $out = "";
+
+  $object = "bpy.data.objects[\"$modelName\"]";
+  $out .= "$object.select_set(True)\nbpy.context.view_layer.objects.active = $object\n";
+  $out .= "bpy.ops.object.duplicate(linked=0,mode='TRANSLATION')\n";
+  $out .= "bpy.context.collection.objects.link(bpy.context.active_object)\n";
+  $out .= "obj = bpy.context.active_object\n";
+
+  return $out;
 }
 
 ###
@@ -686,11 +707,9 @@ function card_set( $msg, $X, $Y, $time, $duration, $Z="3.0" )
 
   # Duplicate and select the card
   $cardName = MODEL_NAME["Card"]["name"];
-  $cardObject = "bpy.data.objects[\"$cardName\"]";
   $out .=  "# Add speech bubble '$msg'\n";
-  $out .= "$cardObject.select_set(True)\nbpy.context.view_layer.objects.active = $cardObject\n";
-  $out .= "obj = bpy.data.objects[\"$cardName\"].copy()\n";
-  $out .= "bpy.context.collection.objects.link(obj)\n";
+  $out .= blender_duplicate( $cardName );
+  $out .= "obj.name = 'card $time'\n";
 
   # set the message
   $out .= "obj.modifiers[\"GeometryNodes\"][\"Socket_2\"] = \"$msg\"\n";
@@ -703,7 +722,8 @@ function card_set( $msg, $X, $Y, $time, $duration, $Z="3.0" )
   $out .= "obj.location = ($X, $Y, $Z)\n";
   $out .= "obj.keyframe_insert(data_path=\"location\", frame=$time)\n";
   # remove after $duration
-  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $time + $duration ).")\n\n";
+  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $time + $duration ).")\n";
+  $out .= "obj.select_set(False)\n\n";
 
   return $out;
 }
@@ -811,6 +831,7 @@ function impulse_display( $time )
   # set the message
   $out .= "$cardObject.modifiers[\"GeometryNodes\"][\"Socket_2\"] = \"T".$turn."i".$impulse."\"\n";
   $out .= "$cardObject.data.update()\n\n";
+  $out .= "$cardObject.select_set(False)\n";
 
   return $out;
 }
