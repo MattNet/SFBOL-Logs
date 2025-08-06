@@ -55,7 +55,7 @@ class LogUnit
   private $SPEEDREGEX = "/^(.+) (changed|initial) speed to (\d+)$/";
   private $TRACTORDOWNREGEX = "/^(.+) drops tractor on (.+)$/";
   private $TRACTORUPREGEX = "/^(.+) tractors (.+)$/";
-  private $WEAPONREGEX = "/^(.*) fires (.+) #(\w+) \((.+)\) at (.*?) (using .*)?\(Range: (\d+)\)$/";
+  private $WEAPONREGEX = "/^(.*) fires (.+) (?:#)?(\w+) \((.+)\) at (.*?) (using .*)?\(Range: (\d+)\)$/";
   private $pointerFacing = "A"; # tracks the last facing found. Used to determine HETs
   private $pointerSpeed = 0; # tracks the last speed change found. Used to determine TACs
   private $pointerTime = 0; # tracks the last impulse found, so any events can go to the right impulse
