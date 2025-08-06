@@ -701,7 +701,7 @@ function blender_duplicate( $modelName )
 # Returns:
 # - (string) The python code to affect the move and turn
 ###
-function card_set( $msg, $X, $Y, $time, $duration, $Z="3.0" )
+function card_set( $msg, $X, $Y, $time, $duration, $Z="1.5 )
 {
   $out = "";
 
@@ -763,7 +763,7 @@ function make_phaser( $ownerLocation, $targetLocation, $startFrame )
   # Figure the parts of a cylinder between the aggressor and defender
   $dx = $targXLoc - $ownXLoc;
   $dy = $targYLoc - $ownYLoc;
-  $dz = 1.2;
+  $dz = 0.6;
   $rad = 0.03;
   $dist = round( sqrt( $dx**2 + $dy**2 ), 4 );
   $phi = round( atan2( $dy, $dx ), 4 );
@@ -782,7 +782,7 @@ function make_phaser( $ownerLocation, $targetLocation, $startFrame )
   $out .= "bpy.context.object.keyframe_insert(data_path=\"location\", frame=".( $startFrame + $FRAMESPERACTION + 1 ).")\n";
 
   # Add texture to phaser
-  $out .= "bpy.context.object.data.materials.append(bpy.data.materials.get(\"$phaserMaterial\"))\n";
+  $out .= "bpy.context.object.data.materials.append(bpy.data.materials.get(\"$phaserMaterial\"))\n\n";
 
   return $out;
 }
