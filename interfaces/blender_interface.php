@@ -81,6 +81,10 @@ define( 'MODEL_NAME', array(
   'Andromedan DisDev' => array( "name" => 'DisDev Marker', 'no_rotate' => true ),
   'Card' => array( "name" => 'Card', 'no_rotate' => true ),
   'CamCard' => array( "name" => 'Camera Title', 'no_rotate' => true ),
+  'Front Shield' => array( "name" => 'shield.front', 'no_rotate' => false ),
+  'Left Shield' => array( "name" => 'shield.left', 'no_rotate' => false ),
+  'Rear Shield' => array( "name" => 'shield.rear', 'no_rotate' => false ),
+  'Right Shield' => array( "name" => 'shield.right', 'no_rotate' => false ),
 ) );
 
 # these are configuration variables
@@ -140,10 +144,10 @@ if( $NOANIMATION )
 $output .= ($FRAMESFORMOVE + ($FRAMESPERACTION * 2))." frames long.\n";
 $output .= "# - Movement takes $FRAMESFORMOVE frames.\n";
 $output .= "# - Early-impulse actions are animated for $FRAMESPERACTION frames.\n";
-$output .= "# - Weapons fire is animated for $FRAMESPERACTION frames.";
+$output .= "# - Weapons fire is animated for $FRAMESPERACTION frames.\n";
 if( $NOANIMATION )
-  $output .= "# - Impulses with no activity will skip the activity segment.";
-$output .= "\n#####\n\n";
+  $output .= "# - Impulses with no activity will skip the activity segments, but not the move segment.\n";
+$output .= "#####\n\n";
 $output .= "for obj in bpy.data.objects:\n   obj.select_set(False)\n\n";
 $phaserMaterial = "Phaser Blast"; # Blender name of the texture to give the weapon blast
 $readFile = $CLIend[0];
@@ -461,6 +465,11 @@ for( $i=0; $i<=$LastLine; $i++ )
             $msg .= "+".$action["internals"];
           $output .= card_set( $msg, $XLoc, $YLoc, $frame+$FRAMESFORMOVE+$FRAMESPERACTION, $FRAMESPERACTION );
 
+###
+# Need to determine shield direction to show
+###
+//          if( $action["shields"] > 0 )
+//            make_shield( $XLoc, $YLoc, , $frame+$FRAMESFORMOVE+$FRAMESPERACTION, $FRAMESPERACTION );
         }
       }
     }
@@ -491,6 +500,10 @@ for( $i=0; $i<=$LastLine; $i++ )
   if( $flagWasActivity || ! $NOANIMATION )
     $frameIncrement += ( 2 * $FRAMESPERACTION ); # Track impulse activity if there was some
 }
+
+# Handle the surrender
+$output .= make_flag( "13", "-14", $frameIncrement, (2 * $FRAMESPERACTION) );
+$frameIncrement += ( 2 * $FRAMESPERACTION ); # Add time for the flag waving
 
 # set the length of the animation
 # This is assuredly too large if $NOANIMATION is true
@@ -676,14 +689,29 @@ function keyframe_move( $unit, $X=null, $Y=null, $rotation=0, $delay=0, $suddenM
 # Returns:
 # - (string) The python code to create the second model
 ###
-function blender_duplicate( $modelName )
+function blender_duplicate( $modelName, $toCollection="Collection 1" )
 {
   $out = "";
+  $fromCollection = "Collection 2"; # Blender collection holding the original model
 
   $object = "bpy.data.objects[\"$modelName\"]";
   $out .= "$object.select_set(True)\nbpy.context.view_layer.objects.active = $object\n";
   $out .= "bpy.ops.object.duplicate(linked=0,mode='TRANSLATION')\n";
-  $out .= "bpy.context.collection.objects.link(bpy.context.active_object)\n";
+  # Could use 'bpy.context.collection.objects.link()', but best to be explicit
+  $out .= "try:\n";
+  $out .= "    bpy.data.collections[\"$toCollection\"].objects.link(bpy.context.active_object)\n";
+  $out .= "except RuntimeError:\n";
+  $out .= "    True\n\n";
+  # remove (unlink) the duplicate model from the collection holding the original model
+  # if we unlink the model from all collections, then the model is deleted
+  if( $toCollection != $fromCollection )
+  {
+    $out .= "try:\n";
+    $out .= "    bpy.data.collections[\"$fromCollection\"].objects.unlink(bpy.context.active_object)\n";
+    $out .= "except RuntimeError:\n";
+    $out .= "    True\n\n";
+  }
+
   $out .= "obj = bpy.context.active_object\n";
 
   return $out;
@@ -699,9 +727,9 @@ function blender_duplicate( $modelName )
 # - (int) How long to show the card, in frames
 # - (int) [optional] The Z-location to move to, in blender units
 # Returns:
-# - (string) The python code to affect the move and turn
+# - (string) The python code to show the card
 ###
-function card_set( $msg, $X, $Y, $time, $duration, $Z="1.5 )
+function card_set( $msg, $X, $Y, $time, $duration, $Z="1.5" )
 {
   $out = "";
 
@@ -739,6 +767,75 @@ function card_set( $msg, $X, $Y, $time, $duration, $Z="1.5 )
 ###
 function make_cloak( $ownerLocation, $startFrame )
 {
+}
+
+###
+# Emits the python code to animate the surrender flag
+###
+# Args are:
+# - (int) The X-location to move to, in blender units
+# - (int) The Y-location to move to, in blender units
+# - (int) How long to show the flag, in frames
+# - (int) [optional] The Z-location to move to, in blender units
+# Returns:
+# - (string) The python code to animate the flag
+###
+function make_flag( $X, $Y, $time, $duration, $Z="1.5" )
+{
+  $out = "";
+  $rotation = "180";
+  $fabricName = "Flag Fabric";
+
+  # make + move the flag pole
+  $out = "# Move the Surrender Flag Pole\n";
+  $out .= blender_duplicate( "Pole" );
+  # mark the off-map location
+  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".($time-1).")\n";
+  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $time + $duration + 1 ).")\n";
+  # set the new location
+  $out .= "obj.location = ($X, $Y, $Z)\n";
+  $out .= "obj.keyframe_insert(data_path=\"location\", frame=$time)\n";
+  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $time + $duration ).")\n";
+  # initial rotation
+  $out .= "bpy.context.object.rotation_euler = (0.0, 0.0, 0.0)\n";
+  $out .= "bpy.context.object.keyframe_insert(data_path=\"rotation_euler\", frame=$time, index=2)\n";
+  # the new rotation
+  $out .= "rotation = degrees(obj.rotation_euler[2]) + ($rotation)\n";
+  $out .= "bpy.context.object.rotation_euler = (0.0, 0.0, radians(rotation))\n";
+  $out .= "bpy.context.object.keyframe_insert(data_path=\"rotation_euler\", frame=".( $time + $duration ).", index=2)\n";
+  $out .= "obj.select_set(False)\n\n";
+
+  # make + move the flag fabric
+  $out .= "# Move the Surrender Flag\n";
+  $out .= blender_duplicate( "Flag" );
+  $out .= "obj.name = '$fabricName'\n";
+  # mark the off-map location
+  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".($time-1).")\n";
+  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $time + $duration + 1 ).")\n";
+  # set the new location
+  $out .= "obj.location = ($X, $Y, $Z)\n";
+  $out .= "obj.keyframe_insert(data_path=\"location\", frame=$time)\n";
+  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $time + $duration ).")\n";
+  # initial rotation
+  $out .= "bpy.context.object.rotation_euler = (0.0, 0.0, 0.0)\n";
+  $out .= "bpy.context.object.keyframe_insert(data_path=\"rotation_euler\", frame=$time, index=2)\n";
+  # the new rotation
+  $out .= "rotation = degrees(obj.rotation_euler[2]) + ($rotation)\n";
+  $out .= "bpy.context.object.rotation_euler = (0.0, 0.0, radians(rotation))\n";
+  $out .= "bpy.context.object.keyframe_insert(data_path=\"rotation_euler\", frame=".( $time + $duration ).", index=2)\n";
+
+  # animate the fabric
+  $out .= "# Animate the flag\n";
+  $out .= "bpy.ops.object.modifier_add(type='CLOTH')\n";
+  $out .= "bpy.data.objects[\"$fabricName\"].modifiers[\"Cloth\"].point_cache.frame_start=$time\n";
+  $out .= "bpy.data.objects[\"$fabricName\"].modifiers[\"Cloth\"].point_cache.frame_end=".( $time + $duration )."\n";
+  $out .= "bpy.data.objects[\"$fabricName\"].modifiers[\"Cloth\"].settings.vertex_group_mass='Flag Pins'\n";
+  $out .= "# Normally Bake the flag waving, here.\n# However, moving a baked simulation messes up the simulation.\n";
+  $out .= "# bpy.ops.ptcache.bake_all(bake=True)\n";
+
+  $out .= "obj.select_set(False)\n\n";
+
+  return $out;
 }
 
 ###
@@ -782,7 +879,46 @@ function make_phaser( $ownerLocation, $targetLocation, $startFrame )
   $out .= "bpy.context.object.keyframe_insert(data_path=\"location\", frame=".( $startFrame + $FRAMESPERACTION + 1 ).")\n";
 
   # Add texture to phaser
-  $out .= "bpy.context.object.data.materials.append(bpy.data.materials.get(\"$phaserMaterial\"))\n\n";
+  $out .= "bpy.context.object.data.materials.append(bpy.data.materials.get(\"$phaserMaterial\"))\n";
+  $out .= "bpy.context.object.name = 'Phaser $startFrame'\n";
+  $out .= "bpy.ops.object.select_all(action=\"DESELECT\")\n\n"; # clunky way to deselect the one item just created
+
+  return $out;
+}
+
+###
+# Emits the python code to create a shield around the unit
+###
+# Args are:
+# - (int) The X-location to move to, in blender units
+# - (int) The Y-location to move to, in blender units
+# - (string) Which side of shield to show
+#   Possibly receive SIDE as (integer) degree from front centerline to show shield
+# - (int) How long to show the shield, in frames
+# - (int) [optional] The Z-location to move to, in blender units
+# Returns:
+# - (string) The python code to show the shield
+###
+function make_shield( $X, $Y, $side, $time, $duration, $Z="1.5" )
+{
+  $out = "";
+
+  # Duplicate and select the shield
+  $shieldName = MODEL_NAME["Front Shield"]["name"];
+  $out .=  "# Shield the unit\n";
+  $out .= blender_duplicate( $shieldName );
+  $out .= "obj.name = 'shield $time'\n";
+  $out .= "obj.hide_render = False\n";
+
+  # mark the off-map location
+  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".($time-1).")\n";
+  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $time + $duration + 1 ).")\n";
+  # set the new location
+  $out .= "obj.location = ($X, $Y, $Z)\n";
+  $out .= "obj.keyframe_insert(data_path=\"location\", frame=$time)\n";
+  # remove after $duration
+  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $time + $duration ).")\n";
+  $out .= "obj.select_set(False)\n\n";
 
   return $out;
 }
