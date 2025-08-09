@@ -450,6 +450,7 @@ for( $i=0; $i<=$LastLine; $i++ )
         else if( isset($action["total"]) )
         {
 # $action [
+#     [direction] => [ "A"=>TRUE ]
 #     [internals] => 7
 #     [owner] => ncc1792
 #     [owner location] => 1234
@@ -465,11 +466,10 @@ for( $i=0; $i<=$LastLine; $i++ )
             $msg .= "+".$action["internals"];
           $output .= card_set( $msg, $XLoc, $YLoc, $frame+$FRAMESFORMOVE+$FRAMESPERACTION, $FRAMESPERACTION );
 
-###
-# Need to determine shield direction to show
-###
-//          if( $action["shields"] > 0 )
-//            make_shield( $XLoc, $YLoc, , $frame+$FRAMESFORMOVE+$FRAMESPERACTION, $FRAMESPERACTION );
+          # draw the shields
+          if( $action["shields"] > 0 )
+            foreach( $action["direction"] as $dir=>$value )
+              make_shield( $XLoc, $YLoc, $dir , $frame+$FRAMESFORMOVE+$FRAMESPERACTION, $FRAMESPERACTION );
         }
       }
     }
@@ -892,8 +892,8 @@ function make_phaser( $ownerLocation, $targetLocation, $startFrame )
 # Args are:
 # - (int) The X-location to move to, in blender units
 # - (int) The Y-location to move to, in blender units
-# - (string) Which side of shield to show
-#   Possibly receive SIDE as (integer) degree from front centerline to show shield
+# - (string) Which side of shield to show: A-F
+#            Where A is front, clockwise, to F is front-left
 # - (int) How long to show the shield, in frames
 # - (int) [optional] The Z-location to move to, in blender units
 # Returns:
@@ -903,8 +903,30 @@ function make_shield( $X, $Y, $side, $time, $duration, $Z="1.5" )
 {
   $out = "";
 
-  # Duplicate and select the shield
-  $shieldName = MODEL_NAME["Front Shield"]["name"];
+  # Select the shield
+  switch( strtoupper($side) )
+  {
+  case "A":
+  $shieldName = MODEL_NAME["Shield A"]["name"];
+    break;
+  case "B":
+  $shieldName = MODEL_NAME["Shield B"]["name"];
+    break;
+  case "C":
+  $shieldName = MODEL_NAME["Shield C"]["name"];
+    break;
+  case "D":
+  $shieldName = MODEL_NAME["Shield D"]["name"];
+    break;
+  case "E":
+  $shieldName = MODEL_NAME["Shield E"]["name"];
+    break;
+  case "F":
+  $shieldName = MODEL_NAME["Shield F"]["name"];
+    break;
+  }
+
+  # Duplicate the shield
   $out .=  "# Shield the unit\n";
   $out .= blender_duplicate( $shieldName );
   $out .= "obj.name = 'shield $time'\n";

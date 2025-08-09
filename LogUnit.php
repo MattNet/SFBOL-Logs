@@ -144,12 +144,27 @@ class LogUnit
       if( $status == 1 && $matches[1] == $this->name )
       {
         $damage = 0;
+        $dir = array();
         $internals = 0;
         $reinforcement = 0;
         # get the total damage from the second line
         $status = preg_match( $this->DMGAREGEX, $log[$lineNum+1], $matches );
         if( $status == 1 )
+        {
           $damage = intval($matches[7]); # pull the total damage from the second line
+          if( $matches[1] )
+            $dir["A"] = true;
+          if( $matches[2] )
+            $dir["B"] = true;
+          if( $matches[3] )
+            $dir["C"] = true;
+          if( $matches[4] )
+            $dir["D"] = true;
+          if( $matches[5] )
+            $dir["E"] = true;
+          if( $matches[6] )
+            $dir["F"] = true;
+        }
         else
         {
           $this->error .= "Damage announcement line without subsequent allocation. Unit '".$this->name."', Line ".($lineNum+1)."\n";
@@ -170,7 +185,7 @@ class LogUnit
           $internals = intval($matches[1]);
 
         $shields = $damage - $reinforcement - $internals;
-        $output = array( "internals"=>$internals, "owner"=>$this->name, 
+        $output = array( "direction"=>$dir,"internals"=>$internals, "owner"=>$this->name, 
                          "owner location"=>$this->lastLocation, 
                          "reinforcement"=>$reinforcement, "shields"=>$shields,
                          "total"=>$damage
