@@ -328,7 +328,7 @@ for( $i=0; $i<=$LastLine; $i++ )
           $rot = 0;
           list( $XLoc, $YLoc ) = locationPixels( $action["location"] );
 
-          $output .= "# Launch/land ".$unitList[ $action["owner"] ]["basic"]."\n";
+          $output .= "# Launch/land ".ucfirst($unitList[ $action["owner"] ]["basic"])."\n";
 
           # Set the initial rotation/location
           # if the unit never turns, skip determining rotation amount
@@ -338,7 +338,7 @@ for( $i=0; $i<=$LastLine; $i++ )
           $ShipsFacings[ $action["owner"] ] = $action["facing"];
 
           # Announce the action
-          $output .= card_set( $unitList[ $action["owner"] ]["basic"]." Launch", $XLoc, $YLoc, $frame+$FRAMESFORMOVE, $FRAMESPERACTION );
+          $output .= card_set( ucfirst($unitList[ $action["owner"] ]["basic"])." Launch", $XLoc, $YLoc, $frame+$FRAMESFORMOVE, $FRAMESPERACTION );
 
           # Flag that we had impulse activity
           $flagWasActivity = true;
@@ -780,7 +780,7 @@ function make_cloak( $ownerLocation, $startFrame )
 # Returns:
 # - (string) The python code to animate the flag
 ###
-function make_flag( $X, $Y, $time, $duration, $Z="1.5" )
+function make_flag( $X, $Y, $time, $duration, $Z="0" )
 {
   $out = "";
   $rotation = "180";
