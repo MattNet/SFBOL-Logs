@@ -10,10 +10,14 @@
 # - Shows all impulse items
 # removeAction( $time, $action )
 # - Removes the action at $time impulses.
+# getCurrentLocation( $time )
+# - retrieves the location of the unit for the current impulse
 # getCurrentSpeed( $time )
 # - retrieves the speed of the unit for the current impulse
 # isHetTac( $new_facing, $old_facing, $speed )
 # - Determines if a facing change is a HET or a TAC
+# getLocationTrail( $time, $amt )
+# - retrieves the location of the unit for several impulses
 # (static) function convertToImp( $time )
 # - Converts the 'turn.impulse' notation to number of impulses
 # (static) convertFromImp( $time )
@@ -473,7 +477,44 @@ class LogUnit
   }
 
   ###
-  # retrieves the speed of the unit for the current impulse
+  # Retrieves the facing of the unit for the current impulse
+  ###
+  # Args are:
+  # - (string) The time to examine, in 'turn.impulse' notation
+  # Returns:
+  # - (string) The letter of the last facing change
+  ###
+  function getCurrentFacing( $time )
+  {
+    $output = 0;
+    $time = self::convertToImp( $time );
+    if( $time === null )
+    {
+      $this->error .= "Invalid time format in ".self::class."->getCurrentFacing(). Given '$time', Unit '".$this->name."'.\n";
+      return NULL;
+    }
+    if( $this->removed < $time || $this->added > $time )
+    {
+      $this->error .= "Time given to ".self::class."->getCurrentFacing() is not recorded in the log file: Unit '".$this->name."', at $time\n";
+      return NULL;
+    }
+
+    $input = $this->readAll();
+    foreach( $input as $impulse=>$actions )
+    {
+      if( $time < $impulse )
+        break;
+      foreach( $actions as $type )
+      {
+        if( isset( $type["facing"] ) )
+          $output = $type["facing"];
+      }
+    }
+    return $output;
+  }
+
+  ###
+  # Retrieves the location of the unit for the current impulse
   ###
   # Args are:
   # - (string) The time to examine, in 'turn.impulse' notation
@@ -489,7 +530,7 @@ class LogUnit
       $this->error .= "Invalid time format in ".self::class."->getCurrentLocation(). Given '$time', Unit '".$this->name."'.\n";
       return NULL;
     }
-    if( ! isset($this->impulses[$time]) )
+    if( $this->removed < $time || $this->added > $time )
     {
       $this->error .= "Time given to ".self::class."->getCurrentLocation() is not recorded in the log file: Unit '".$this->name."', at $time\n";
       return NULL;
@@ -510,6 +551,65 @@ class LogUnit
   }
 
   ###
+  # retrieves the location of the unit for several impulses
+  ###
+  # Args are:
+  # - (string) The last impulse to examine, in 'turn.impulse' notation
+  # - (int) The number of impulses to capture
+  # Returns:
+  # - (array) An array of the last X impulses of location changes
+  #           Format is Array[ 0 => array( "Latest Impulse Location", "facing", "type of move" ),
+  #                            1 => array( "Impulse -1 Location", ... ),
+  #                            2 => array( "Impulse -2 Location", ... ),
+  #                            3 => array( "Impulse -3 Location", ... )
+  #                          ]
+  #           Where "X impulses" is 4
+  ###
+  function getLocationTrail( $time, $amt )
+  {
+    $output = array();
+    $latestFace = "";
+    $latestLoc = "";
+    $latestMove = "";
+
+    $time = self::convertToImp( $time ); // get impulses as a number
+    if( $time === null )
+    {
+      $this->error .= "Invalid time format in ".self::class."->getLocationTrail(). Given '$time', Unit '".$this->name."'.\n";
+      return NULL;
+    }
+    # if we are going to see a time before the game starts
+    # set $amt so that the first impulse seen is impulse 1
+    if( $time - $amt < 0 )
+      $amt = $time;
+
+    $input = $this->readAll();
+    # Go from the start of the log to the $time impulse. This lets us capture 
+    # a facing and/or location that happened before the capture period
+    for( $i=0; $i<$time; $i++)
+    {
+      if( isset($input[$i]) )
+        foreach( $input[$i] as $type )
+        {
+          if( isset( $type["facing"] ) )
+            $latestFace = $type["facing"];
+          if( isset( $type["location"] ) )
+            $latestLoc = $type["location"];
+          if( isset( $type["turn"] ) && ($time - $amt) != $i )
+            $latestMove = $type["turn"];
+        }
+      else
+        $latestMove = "";
+
+      if( $time - $amt <= $i )
+        $output[ ($time - $i - 1) ] = array( $latestLoc, $latestFace, $latestMove );
+    }
+
+    ksort( $output ); # The $output keys are otherwise in reverse order
+    return $output;
+  }
+
+  ###
   # retrieves the speed of the unit for the current impulse
   ###
   # Args are:
@@ -526,7 +626,7 @@ class LogUnit
       $this->error .= "Invalid time format in ".self::class."->getCurrentSpeed(). Given '$time', Unit '".$this->name."'.\n";
       return NULL;
     }
-    if( ! isset($this->impulses[$time]) )
+    if( $this->removed < $time || $this->added > $time )
     {
       $this->error .= "Time given to ".self::class."->getCurrentSpeed() is not recorded in the log file: Unit '".$this->name."', at $time\n";
       return NULL;

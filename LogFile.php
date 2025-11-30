@@ -72,10 +72,7 @@ class LogFile
     if( is_string($log) == true ) # check if the log data is a string. if so, convert to array
       $log = explode( "\n", $log );
     else if( is_array( $log ) != true ) # if the log data is not an array or string, then exit
-    {
-      $error .= "Input of ".self::class." constructor is not a string or array.\n";
-      return( 1 );
-    }
+      $this->error .= "Input of ".self::class." constructor is not a string or array.\n";
 
     # List of player for units.
     # $player_list[ unit ] = player
@@ -124,7 +121,23 @@ class LogFile
 
     # error reporting for the entire read
     if( $this->error != "" )
-      echo $this-error;
+      echo $this->error;
+  }
+
+  ###
+  # Retrieve a unit's facing
+  ###
+  # Args are:
+  # - (string) The name of the unit to examine
+  # - (string) The time to examine, in 'turn.impulse' notation
+  # Returns:
+  # - (string) The last location change
+  ###
+  function get_unit_facing( $unitName, $time )
+  {
+    $lookup = $this->UNIT_LOOKUP[ $unitName ];
+    $unit = $this->UNITS[ $lookup ];
+    return $unit->getCurrentFacing( $time );
   }
 
   ###
@@ -141,8 +154,35 @@ class LogFile
     $lookup = $this->UNIT_LOOKUP[ $unitName ];
     $unit = $this->UNITS[ $lookup ];
     $location = $unit->getCurrentLocation( $time );
+    if( ! $location )
+      $this->error .= $unit->error;
     return $location;
   }
+
+  ###
+  # Retrieve a unit's location for several impulses
+  ###
+  # Args are:
+  # - (string) The name of the unit to examine
+  # - (string) The last impulse to examine, in 'turn.impulse' notation
+  # - (int) The number of impulses to capture, leading up to the last impulse
+  # Returns:
+  # - (array) An array of the last X impulses of location changes
+  #           Format is Array[ 0 => "Impulse -3 Location",
+  #                            1 => "Impulse -2 Location",
+  #                            2 => "Impulse -1 Location",
+  #                            3 => "Latest Impulse Location"
+  #                          ]
+  #           Where "X impulses" is 4
+  ###
+  function get_unit_location_trail( $unitName, $time, $amt )
+  {
+    $lookup = $this->UNIT_LOOKUP[ $unitName ];
+    $unit = $this->UNITS[ $lookup ];
+    $location = $unit->getLocationTrail( $time, $amt );
+    return $location;
+  }
+
   ###
   # Shows all sequence constants
   ###
@@ -401,6 +441,7 @@ class LogFile
         }
       }
     }
+    ksort($output, SORT_NUMERIC);
     return $output;
   }
 
