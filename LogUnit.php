@@ -586,7 +586,7 @@ class LogUnit
     $input = $this->readAll();
     # Go from the start of the log to the $time impulse. This lets us capture 
     # a facing and/or location that happened before the capture period
-    for( $i=0; $i<$time; $i++)
+    for( $i=0; $i<=$time; $i++)
     {
       if( isset($input[$i]) )
         foreach( $input[$i] as $type )
@@ -602,7 +602,7 @@ class LogUnit
         $latestMove = "";
 
       if( $time - $amt <= $i )
-        $output[ ($time - $i - 1) ] = array( $latestLoc, $latestFace, $latestMove );
+        $output[ ($time - $i) ] = array( $latestLoc, $latestFace, $latestMove );
     }
 
     ksort( $output ); # The $output keys are otherwise in reverse order
