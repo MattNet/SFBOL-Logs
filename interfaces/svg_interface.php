@@ -16,9 +16,7 @@ and optional movement trails for display continuity.
 ###
 include_once("../LogFile.php");
 
-## TODO: Duplicate frames based on FRAMESFORMOVE and FRAMESPERACTION
-## TODO: remove unused action and weapons fire frames if $NOANIMATION = true
-## TODO: Verify movement trails. Use trails from LOGFILE instead of cached trails in this code
+## TODO: Implement no-rotation marker effect
 
 ###
 # Default Values
@@ -27,7 +25,7 @@ $FRAMESFORMOVE = 1;
 $FRAMESPERACTION = 1;
 $NOANIMATION = false;
 $SHOWNUMBERS = true; // Optional: show hex numbers on map
-$TRAIL_LENGTH = 0; // Optional: number of past impulses to retain as a trail
+$MOVEMENTTRAILS = 0; // Optional: number of past impulses to retain as a trail
 
 $FILEPREFIX = "frame_";
 $FRAMEFILE = "svg_frames";
@@ -54,97 +52,100 @@ define('MAP_MARGIN_VERT', HEX_RADIUS);
 define('COLOR_TRACTOR', '#00BFFF');
 define('COLOR_WEAPON', '#FF4500');
 define('COLOR_DAMAGE', '#3333FF');
-define('COLOR_TRAIL', '#AAAAAA');
+define('TRAIL_OPACITY', 0.75);
 
 ###
 # Lookup table for unit-type (per the log file) to named Blender model
 # e.g. "Gozilla (Type:Gorn TCC) has been added at ..."
 #                ^^^^^^^^^^^^^
 ###
-define( 'MODEL_NAME', array(
+$MODEL_NAME = array(
 # Ships
-  'Andromedan Krait (Official)' => array( "name" => 'andcoq', 'no_rotate' => false ),
-  'Archeo-Tholian TCC' => array( "name" => 'thoca', 'no_rotate' => false ),
-  'Fed TCC (G-Rack) (Playtest)' => array( "name" => 'fedca', 'no_rotate' => false ),
-  'Fed TCC (Official' => array( "name" => 'fedca', 'no_rotate' => false ),
-  'Frax TC (Playtest)' => array( "name" => 'fraca', 'no_rotate' => false ),
-  'Gorn TCC' => array( "name" => 'gorca', 'no_rotate' => false ),
-  'Hydran TLM' => array( "name" => 'hydcc', 'no_rotate' => false ),
-  'ISC TCC' => array( "name" => 'iscca', 'no_rotate' => false ),
-  'Klingon TD7C' => array( "name" => 'klid6', 'no_rotate' => false ),
-  'Kzinti TCC' => array( "name" => 'kzica', 'no_rotate' => false ),
-  'LDR TCWL' => array( "name" => 'ldrcw', 'no_rotate' => false ),
-  'Lyran TCC' => array( "name" => 'lyrca', 'no_rotate' => false ),
-  'Orion TBR' => array( "name" => 'oribr', 'no_rotate' => false ),
-  'Romulan TFH' => array( "name" => 'romfh', 'no_rotate' => false ),
-  'Romulan TKE' => array( "name" => 'romwe', 'no_rotate' => false ),
-  'Romulan TKR' => array( "name" => 'romkr', 'no_rotate' => false ),
-  'Seltorian TCA' => array( "name" => 'selca', 'no_rotate' => false ),
-  'Vudar TCA' => array( "name" => 'vudca', 'no_rotate' => false ),
-  'Wyn GBS' => array( "name" => 'wynca', 'no_rotate' => false ),
-  'Wyn TAxBC' => array( "name" => 'wynaxbc', 'no_rotate' => false ),
+  'Andromedan Krait (Official)' => array( "name" => 'andcoq', 'no_rotate' => false, 'colorSource' => '' ),
+  'Archeo-Tholian TCC' => array( "name" => 'thoca', 'no_rotate' => false, 'colorSource' => '' ),
+  'Fed TCC (G-Rack) (Playtest)' => array( "name" => 'fedca', 'no_rotate' => false, 'colorSource' => '' ),
+  'Fed TCC (Official' => array( "name" => 'fedca', 'no_rotate' => false, 'colorSource' => '' ),
+  'Frax TC (Playtest)' => array( "name" => 'fraca', 'no_rotate' => false, 'colorSource' => '' ),
+  'Gorn TCC' => array( "name" => 'gorca', 'no_rotate' => false, 'colorSource' => '' ),
+  'Hydran TLM' => array( "name" => 'hydcc', 'no_rotate' => false, 'colorSource' => '' ),
+  'ISC TCC' => array( "name" => 'iscca', 'no_rotate' => false, 'colorSource' => '' ),
+  'Klingon TD7C' => array( "name" => 'klid6', 'no_rotate' => false, 'colorSource' => '' ),
+  'Kzinti TCC' => array( "name" => 'kzica', 'no_rotate' => false, 'colorSource' => '' ),
+  'LDR TCWL' => array( "name" => 'ldrcw', 'no_rotate' => false, 'colorSource' => '' ),
+  'Lyran TCC' => array( "name" => 'lyrca', 'no_rotate' => false, 'colorSource' => '' ),
+  'Orion TBR' => array( "name" => 'oribr', 'no_rotate' => false, 'colorSource' => '' ),
+  'Romulan TFH' => array( "name" => 'romfh', 'no_rotate' => false, 'colorSource' => '' ),
+  'Romulan TKE' => array( "name" => 'romwe', 'no_rotate' => false, 'colorSource' => '' ),
+  'Romulan TKR' => array( "name" => 'romkr', 'no_rotate' => false, 'colorSource' => '' ),
+  'Seltorian TCA' => array( "name" => 'selca', 'no_rotate' => false, 'colorSource' => '' ),
+  'Vudar TCA' => array( "name" => 'vudca', 'no_rotate' => false, 'colorSource' => '' ),
+  'Wyn GBS' => array( "name" => 'wynca', 'no_rotate' => false, 'colorSource' => '' ),
+  'Wyn TAxBC' => array( "name" => 'wynaxbc', 'no_rotate' => false, 'colorSource' => '' ),
 # Expendables
-  'Andromedan Mine' => array( "name" => 'allsmallmine', 'no_rotate' => true ),
-  'Archeo-Tholian Web' => array( "name" => '', 'no_rotate' => true ),
-  'Archeo-Tholian Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false ),
-  'Fed Drone' => array( "name" => 'alldrone', 'no_rotate' => false ),
-  'Fed Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false ),
-  'Frax Drone' => array( "name" => 'alldrone', 'no_rotate' => false ),
-  'Frax Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false ),
-  'Gorn Plasma' => array( "name" => 'allplasma', 'no_rotate' => false ),
-  'Gorn Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false ),
-  'Hydran Fighter' => array( "name" => 'hydfighter', 'no_rotate' => false ),
-  'Hydran Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false ),
-  'ISC Plasma' => array( "name" => 'allplasma', 'no_rotate' => false ),
-  'ISC Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false ),
-  'Klingon Drone' => array( "name" => 'alldrone', 'no_rotate' => false ),
-  'Klingon Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false ),
-  'LDR ESG' => array( "name" => 'ESG', 'no_rotate' => true ),
-  'LDR Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false ),
-  'Lyran ESG' => array( "name" => 'ESG', 'no_rotate' => true ),
-  'Lyran Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false ),
-  'Orion Drone' => array( "name" => 'alldrone', 'no_rotate' => false ),
-  'Orion ESG' => array( "name" => 'ESG', 'no_rotate' => true ),
-  'Orion Plasma' => array( "name" => 'allplasma', 'no_rotate' => false ),
-  'Orion Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false ),
-  'TFE Plasma' => array( "name" => 'allplasma', 'no_rotate' => false ),
-  'TKE Plasma' => array( "name" => 'allplasma', 'no_rotate' => false ),
-  'TKR Plasma' => array( "name" => 'allplasma', 'no_rotate' => false ),
-  'Romulan Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false ),
-  'Vudar Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false ),
-  'Wyn TAxBC Drone' => array( "name" => 'alldrone', 'no_rotate' => false ),
-  'WYN ESG' => array( "name" => 'ESG', 'no_rotate' => true ),
-  'WYN Plasma' => array( "name" => 'allplasma', 'no_rotate' => false ),
-  'Wyn TAxBC Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false ),
+  'Andromedan Mine' => array( "name" => 'allsmallmine', 'no_rotate' => true, 'colorSource' => 'Andromedan Krait (Official)' ),
+  'Archeo-Tholian Web' => array( "name" => 'allweb', 'no_rotate' => true, 'colorSource' => 'Archeo-Tholian TCC' ),
+  'Archeo-Tholian Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false, 'colorSource' => 'Archeo-Tholian TCC' ),
+  'Fed Drone' => array( "name" => 'alldrone', 'no_rotate' => false, 'colorSource' => 'Fed TCC (G-Rack) (Playtest)' ),
+  'Fed Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false, 'colorSource' => 'Fed TCC (G-Rack) (Playtest)' ),
+  'Frax Drone' => array( "name" => 'alldrone', 'no_rotate' => false, 'colorSource' => 'Frax TC (Playtest)' ),
+  'Frax Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false, 'colorSource' => 'Frax TC (Playtest)' ),
+  'Gorn Plasma' => array( "name" => 'allplasma', 'no_rotate' => false, 'colorSource' => 'Gorn TCC' ),
+  'Gorn Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false, 'colorSource' => 'Gorn TCC' ),
+  'Hydran Fighter' => array( "name" => 'hydfighter', 'no_rotate' => false, 'colorSource' => '' ),
+  'Hydran Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false, 'colorSource' => 'Hydran TLM' ),
+  'ISC Plasma' => array( "name" => 'allplasma', 'no_rotate' => false, 'colorSource' => 'ISC TCC' ),
+  'ISC Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false, 'colorSource' => 'ISC TCC' ),
+  'Klingon Drone' => array( "name" => 'alldrone', 'no_rotate' => false, 'colorSource' => 'Klingon TD7C' ),
+  'Klingon Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false, 'colorSource' => 'Klingon TD7C' ),
+  'LDR ESG' => array( "name" => 'ESG', 'no_rotate' => true, 'colorSource' => 'LDR TCWL' ),
+  'LDR Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false, 'colorSource' => 'LDR TCWL' ),
+  'Lyran ESG' => array( "name" => 'ESG', 'no_rotate' => true, 'colorSource' => 'Lyran TCC' ),
+  'Lyran Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false, 'colorSource' => 'Lyran TCC' ),
+  'Orion Drone' => array( "name" => 'alldrone', 'no_rotate' => false, 'colorSource' => 'Orion TBR' ),
+  'Orion ESG' => array( "name" => 'ESG', 'no_rotate' => true, 'colorSource' => 'Orion TBR' ),
+  'Orion Plasma' => array( "name" => 'allplasma', 'no_rotate' => false, 'colorSource' => 'Orion TBR' ),
+  'Orion Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false, 'colorSource' => 'Orion TBR' ),
+  'TFE Plasma' => array( "name" => 'allplasma', 'no_rotate' => false, 'colorSource' => 'Romulan TFH' ),
+  'TKE Plasma' => array( "name" => 'allplasma', 'no_rotate' => false, 'colorSource' => 'Romulan TKE' ),
+  'TKR Plasma' => array( "name" => 'allplasma', 'no_rotate' => false, 'colorSource' => 'Romulan TKR' ),
+  'Romulan Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false, 'colorSource' => 'Romulan TKR' ),
+  'Vudar Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false, 'colorSource' => 'Vudar TCA' ),
+  'Wyn TAxBC Drone' => array( "name" => 'alldrone', 'no_rotate' => false, 'colorSource' => 'Wyn TAxBC' ),
+  'WYN ESG' => array( "name" => 'ESG', 'no_rotate' => true, 'colorSource' => '' ),
+  'WYN Plasma' => array( "name" => 'allplasma', 'no_rotate' => false, 'colorSource' => 'Wyn TAxBC' ),
+  'Wyn TAxBC Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false, 'colorSource' => 'Wyn TAxBC' ),
 # Misc
-  'Andromedan DisDev' => array( "name" => 'DisDev Marker', 'no_rotate' => true ),
-  'Card' => array( "name" => 'Card', 'no_rotate' => true ),
-  'CamCard' => array( "name" => 'Camera Title', 'no_rotate' => true ),
-  'Front Shield' => array( "name" => 'shield.front', 'no_rotate' => false ),
-  'Left Shield' => array( "name" => 'shield.left', 'no_rotate' => false ),
-  'Rear Shield' => array( "name" => 'shield.rear', 'no_rotate' => false ),
-  'Right Shield' => array( "name" => 'shield.right', 'no_rotate' => false ),
-) );
+  'Andromedan DisDev' => array( "name" => 'DisDev Marker', 'no_rotate' => true, 'colorSource' => '' ),
+  'Card' => array( "name" => 'Card', 'no_rotate' => true, 'colorSource' => '' ),
+  'CamCard' => array( "name" => 'Camera Title', 'no_rotate' => true, 'colorSource' => '' ),
+  'Front Shield' => array( "name" => 'shield.front', 'no_rotate' => false, 'colorSource' => '' ),
+  'Left Shield' => array( "name" => 'shield.left', 'no_rotate' => false, 'colorSource' => '' ),
+  'Rear Shield' => array( "name" => 'shield.rear', 'no_rotate' => false, 'colorSource' => '' ),
+  'Right Shield' => array( "name" => 'shield.right', 'no_rotate' => false, 'colorSource' => '' ),
+);
 
 ###
 # CLI Configuration
 ###
 
 $CLIoptions = "";
-$CLIoptions .= "a::m::hxq";
-$CLIlong = array("action::", "move::", "help", "no_action", "quiet");
+$CLIoptions .= "a::m::t::hxq";
+$CLIlong = array("action::", "move::", "trails::", "help", "no_action", "quiet");
 
 $CLI = getopt($CLIoptions, $CLIlong, $rest_index);
 $CLIend = array_slice($argv, $rest_index);
-if ($CLI === false || empty($CLIend)) errorOut("Could not read command line arguments.");
 
 # Adjust configuration from CLI
 if (isset($CLI["a"])) $FRAMESPERACTION = (int)$CLI["a"];
 if (isset($CLI["action"])) $FRAMESPERACTION = (int)$CLI["action"];
 if (isset($CLI["m"])) $FRAMESFORMOVE = (int)$CLI["m"];
 if (isset($CLI["move"])) $FRAMESFORMOVE = (int)$CLI["move"];
+if (isset($CLI["t"])) $MOVEMENTTRAILS = (int)$CLI["t"];
+if (isset($CLI["trails"])) $MOVEMENTTRAILS = (int)$CLI["trails"];
 if (isset($CLI["x"]) || isset($CLI["no_action"])) $NOANIMATION = true;
 if (isset($CLI["h"]) || isset($CLI["help"])) errorOut("");
+
+if ($CLI === false || empty($CLIend)) errorOut("Could not read command line arguments.");
 
 ###
 # Input file handling
@@ -194,33 +195,53 @@ $frameIteration = 0;
 for ($i = 0; $i <= $LastLine; $i++) {
   $impulse = LogUnit::convertFromImp($i);
   $impulseData = $log->read($impulse);
+  $skipActivity = true;
 
-  # Segment 1 — Movement
-  $svg = svg_init();
-  $svg .= draw_map_background();
-  $svg .= show_clock($i);
-  $svg .= process_movement($impulseData, $unitList, $i);
-  $svg .= draw_all_units($unitList, $i);
-  $file = "{$outDir}/{$FILEPREFIX}" . sprintf("%03d",$frameIteration++) . ".svg";
-  write_svg($svg, $file);
+  for ($m = 0; $m < $FRAMESFORMOVE; $m++) {
+    # Segment 1 — Movement
+    $svg = svg_init();
+    $svg .= draw_map_background();
+    $svg .= show_clock($i);
+    $svg .= process_movement($impulseData, $unitList, $i);
+    $svg .= draw_all_units($unitList, $i);
+    $file = "{$outDir}/{$FILEPREFIX}" . sprintf("%03d",$frameIteration++) . ".svg";
+    write_svg($svg, $file);
+  }
 
-  # Segment 2 — Activity
-  $svg = svg_init();
-  $svg .= draw_map_background();
-  $svg .= show_clock($i);
-  $svg .= draw_all_units($unitList, $i);
-  $svg .= process_activity($impulseData, $unitList, $i);
-  $file = "{$outDir}/{$FILEPREFIX}" . sprintf("%03d",$frameIteration++) . ".svg";
-  write_svg($svg, $file);
+  if ($NOANIMATION) {
+    // Detect if there is any more activity
+    foreach ($impulseData as $sequence => $actions) {
+      if ($sequence > LogFile::SEQUENCE_MOVEMENT_TAC && !empty($actions)) {
+        $skipActivity = false; // there is an activity or weapons fire
+        break;
+      }
+    }
+  }
 
-  # Segment 3 — Weapons
-  $svg = svg_init();
-  $svg .= draw_map_background();
-  $svg .= show_clock($i);
-  $svg .= draw_all_units($unitList, $i);
-  $svg .= process_weapons($impulseData, $i);
-  $file = "{$outDir}/{$FILEPREFIX}" . sprintf("%03d",$frameIteration++) . ".svg";
-  write_svg($svg, $file);
+  // If skipping the action segment of impulses is enabled AND nothing happened, skip the rest of the impulse
+  if ($NOANIMATION && $skipActivity) continue; // only Segment 1 is written
+
+  for ($a = 0; $a < $FRAMESPERACTION; $a++) {
+    # Segment 2 — Activity
+    $svg = svg_init();
+    $svg .= draw_map_background();
+    $svg .= show_clock($i);
+    $svg .= draw_all_units($unitList, $i);
+    $svg .= process_activity($impulseData, $unitList, $i);
+    $file = "{$outDir}/{$FILEPREFIX}" . sprintf("%03d",$frameIteration++) . ".svg";
+    write_svg($svg, $file);
+  }
+
+  for ($a = 0; $a < $FRAMESPERACTION; $a++) {
+    # Segment 3 — Weapons
+    $svg = svg_init();
+    $svg .= draw_map_background();
+    $svg .= show_clock($i);
+    $svg .= draw_all_units($unitList, $i);
+    $svg .= process_weapons($impulseData, $unitList, $i);
+    $file = "{$outDir}/{$FILEPREFIX}" . sprintf("%03d",$frameIteration++) . ".svg";
+    write_svg($svg, $file);
+  }
 
   if ($log->error != "") {
     echo $impulse."\n";
@@ -259,7 +280,6 @@ function svg_init() {
     text { font-size: $textScale" . "px }
     .hex { fill:none; stroke:#CCCCCC; stroke-width:1; }
     .unit { stroke:black; stroke-width:1; }
-    .trail { stroke:" . COLOR_TRAIL . "; stroke-width:3; fill:none; opacity:0.5; }
     .clock { font-size:large; font-weight:bold; }
   </style>\n";
   $svg .= "<rect width='100%' height='100%' fill='" . BACKGROUND_COLOR . "' />";
@@ -439,19 +459,20 @@ function draw_map_background() {
 # Draw all visible units at current impulse
 ###
 function draw_all_units($unitList, $impulse) {
-  global $TRAIL_LENGTH;
+  global $MOVEMENTTRAILS;
   $svg = "<g id='units'>\n";
   foreach ($unitList as $unit) {
     if (!isset($unit["location"])) continue;
     if ($unit["added"] > $impulse || $unit["removed"] < $impulse ) continue;
     list($x, $y) = locationPixels($unit["location"]);
 
-    $svg .= draw_unit_marker($x, $y, $unit["facing"], $unit["type"]);
-
-    if ($TRAIL_LENGTH > 0 && count($unit["trail"]) > 1) {
-      $trailPoints = implode(" ", array_map(fn($p) => "{$p[0]},{$p[1]}", $unit["trail"]));
-      $svg .= "<polyline class='trail' points='$trailPoints' />\n";
+    // Render trail from logfile data
+    if ($MOVEMENTTRAILS > 0) {
+      $trailSvg = renderUnitTrail($unit, $impulse);
+      if (!empty($trailSvg)) $svg .= $trailSvg;
     }
+
+    $svg .= draw_unit_marker($x, $y, $unit["facing"], $unit["type"]);
   }
   $svg .= "</g>\n";
   return $svg;
@@ -470,18 +491,20 @@ function locationPixels($loc) {
 
 ###
 # Draw a marker for a unit, rotated to match facing
+# Also extract stroke and fill colors of marker. Place in $MODEL_NAME
 ###
 function draw_unit_marker($x, $y, $facing, $type) {
-  global $ICONDIR;
+  global $ICONDIR, $MODEL_NAME;
 
   static $markerCache = [];
 
   $halfHeight = MARKER_HEIGHT / 2;
   $halfWidth = MARKER_WIDTH / 2;
   $markerScale = round(HEX_RADIUS / $halfHeight, 3);
+  $useColorSource = false; // Determine whether we apply colorSource logic
 
-  if (!isset(MODEL_NAME[$type]) || empty(MODEL_NAME[$type]["name"])) {
-    echo "Could not find entry for '$type' in lookup.\n";
+  if (!isset($MODEL_NAME[$type]) || empty($MODEL_NAME[$type]["name"])) {
+    echo "Could not find entry for '$type' in lookup or unit has no icon file.\n";
     return null;
   }
 
@@ -494,7 +517,7 @@ function draw_unit_marker($x, $y, $facing, $type) {
     return $markerPrefix . $markerCache[$type] . $markerSuffix;
 
   // prepare for marker file
-  $iconFile = $ICONDIR . "/" . MODEL_NAME[$type]["name"] . ".svg";
+  $iconFile = $ICONDIR . "/" . $MODEL_NAME[$type]["name"] . ".svg";
   if (!is_readable($iconFile)) {
     echo "Could not read file '$iconFile' for $type.\n";
     return null;
@@ -503,7 +526,7 @@ function draw_unit_marker($x, $y, $facing, $type) {
   // get the marker file
   $marker = file_get_contents($iconFile);
   if ($marker === false) {
-    echo "Could not retrieve file '$iconFile' for $type.\n";
+    echo "Could not retrieve file '$iconFile' for '$type'.\n";
     return null;
   }
 
@@ -513,6 +536,46 @@ function draw_unit_marker($x, $y, $facing, $type) {
   // Remove closing </svg>
   $marker = preg_replace('/<\/svg>/i', '', $marker);
   $marker = trim($marker);
+
+  $colorSourceType = $MODEL_NAME[$type]['colorSource'];
+  if ($colorSourceType !== '') {
+    // Source unit must exist and have color data (or be loadable)
+    if (!isset($colorSourceType)) {
+      echo "Source of color ($colorSourceType) does not exist for '$type'.\n";
+      return null;
+    }
+
+    // If source unit has no stored colors yet, trigger loading
+    if (!isset($MODEL_NAME[$colorSourceType]['fill']) ||
+      !isset($MODEL_NAME[$colorSourceType]['stroke'])) {
+
+      // This call reuses your existing mechanism to load the marker,
+      // extract colors, and populate $MODEL_NAME for the source.
+      draw_unit_marker($x, $y, $facing, $colorSourceType);
+    }
+
+    // After this, source MUST have fill/stroke to use
+    if (!isset($MODEL_NAME[$colorSourceType]['fill']) ||
+        !isset($MODEL_NAME[$colorSourceType]['stroke'])) {
+      echo "Colors do not exist for '$colorSourceType'.\n";
+      return null;
+    }
+
+    // Record the new colors of the marker
+    $MODEL_NAME[$type]['fill'] = $MODEL_NAME[$colorSourceType]['fill'];
+    $MODEL_NAME[$type]['stroke'] = $MODEL_NAME[$colorSourceType]['stroke'];
+
+    // replace the stroke and fill colors of the marlker
+    $marker = preg_replace('/(style="[^"]*?\bfill:\s*)([^;"]+)(;)/', '$1' . $MODEL_NAME[$type]['fill'] . '$3', $marker,1);
+    $marker = preg_replace('/(style="[^"]*?\bstroke:\s*)([^;"]+)(;)/', '$1' . $MODEL_NAME[$type]['stroke'] . '$3', $marker, 1);
+  } else {
+    // Extract the fill and stroke colors of the marker
+    // Used for marker trails and other effects
+    if (preg_match('/fill:\s*([^;]+);/i', $marker, $m))
+      $MODEL_NAME[$type]['fill'] = trim($m[1]);
+    if (preg_match('/stroke:\s*([^;]+);/i', $marker, $m))
+      $MODEL_NAME[$type]['stroke'] = trim($m[1]);
+  }
 
 //$marker = "<rect width='45' height='45' />".$marker;
   $markerCache[$type] = $marker;
@@ -546,7 +609,7 @@ function show_clock($impulse) {
 }
 
 ###
-# Process movement segment: update locations, facings, and trails
+# Process movement segment: update locations and facings
 ###
 function process_movement($impulseData, &$unitList, $i) {
   $svg = "<g id='movement'>\n";
@@ -558,10 +621,6 @@ function process_movement($impulseData, &$unitList, $i) {
 
       if (isset($action["location"])) {
         $unitList[$name]["location"] = $action["location"];
-        list($x, $y) = locationPixels($action["location"]);
-        $unitList[$name]["trail"][] = array($x, $y);
-        if (count($unitList[$name]["trail"]) > 16)
-          array_shift($unitList[$name]["trail"]);
       }
       if (isset($action["facing"]))
         $unitList[$name]["facing"] = $action["facing"];
@@ -588,34 +647,20 @@ function process_activity($impulseData, &$unitList, $impulse) {
         list($x, $y) = locationPixels($action["owner location"]);
         $svg .= "<circle cx='$x' cy='$y' r='20' fill='none' stroke='gray' stroke-dasharray='5,3' />\n";
       }
-      if ($sequence == LogFile::SEQUENCE_LAUNCH_PLASMA ||
-          $sequence == LogFile::SEQUENCE_LAUNCH_DRONES ||
-          $sequence == LogFile::SEQUENCE_LAUNCH_SHUTTLES
-         ) {
-        list($x, $y) = locationPixels($action["location"]);
-        $svg .= draw_unit_marker($x, $y, $action["facing"], $action["type"]);
-
-        $name = $action["name"] ?? $action["owner"];
-        if (!isset($unitList[$name])) {
-          echo "Tried to draw '$name' on impulse $impulse. Could not find in unit list.\n";
-          continue;
-        }
-        $unitList[$name]["location"] = $action["location"];
-        $unitList[$name]["facing"] = $action["facing"];
-        list($x, $y) = locationPixels($action["location"]);
-        if (count($unitList[$name]["trail"]) > 16)
-          array_shift($unitList[$name]["trail"]);
-      }
+      // launched shuttles or seeking weapons
+      $svg .= process_unit_adds($unitList, $sequence, $action);
     }
   }
   $svg .= "</g>\n";
   return $svg;
 }
+/*if($impulse==30)print_r($unit);
+if($impulse>30)exit;*/
 
 ###
 # Process weapons fire segment
 ###
-function process_weapons($impulseData, $impulse) {
+function process_weapons($impulseData, &$unitList, $impulse) {
   global $log;
   $svg = "<g id='weapons'>\n";
 
@@ -623,6 +668,8 @@ function process_weapons($impulseData, $impulse) {
     if ($sequence < LogFile::SEQUENCE_DIS_DEV_DECLARATION ||
         $sequence >= LogFile::SEQUENCE_IMPULSE_END) continue;
     foreach ($actions as $action) {
+      // cast web
+      $svg .= process_unit_adds($unitList, $sequence, $action);
       // weapon effect
       if (isset($action["weapon"])) {
         $svg .= draw_effect_line($action["owner location"], $action["target"], COLOR_WEAPON, $impulse);
@@ -660,6 +707,169 @@ function process_weapons($impulseData, $impulse) {
 }
 
 ###
+# Set up launched units for being drawn
+###
+function process_unit_adds(&$units, $segment, $impulseAction) {
+  $svg = "";
+  if ($segment == LogFile::SEQUENCE_LAUNCH_PLASMA ||
+      $segment == LogFile::SEQUENCE_LAUNCH_DRONES ||
+      $segment == LogFile::SEQUENCE_LAUNCH_SHUTTLES ||
+      $segment == LogFile::SEQUENCE_CAST_WEB
+  ) {
+    list($x, $y) = locationPixels($impulseAction["location"]);
+    $svg .= draw_unit_marker($x, $y, $impulseAction["facing"], $impulseAction["type"]);
+
+    $name = $impulseAction["name"] ?? $impulseAction["owner"];
+    if (!isset($units[$name])) {
+      echo "Tried to draw '$name' in process_unit_adds(). Could not find in unit list.\n";
+      return "";
+    }
+    $units[$name]["location"] = $impulseAction["location"];
+    $units[$name]["facing"] = $impulseAction["facing"];
+    list($x, $y) = locationPixels($impulseAction["location"]);
+    if (count($units[$name]["trail"]) > 16)
+      array_shift($units[$name]["trail"]);
+  }
+  return $svg;
+}
+
+###
+# Build trail segments for a unit for the current frame using LogUnit trail data.
+# This combines extracting movement steps and building consecutive segments.
+###
+function buildTrailSegmentsForFrame($unitName, $impulse, $amt) {
+  global $log;
+  $timeStr = LogUnit::convertFromImp($impulse);
+  $raw = $log->get_unit_location_trail($unitName, $timeStr, $amt);
+  if ($raw === null || count($raw) < 2) return array();
+
+  // raw[0] == latest. We want chronological order oldest -> newest
+  $steps = array_reverse($raw);
+
+  $segments = array();
+  for ($i = 1; $i < count($steps); $i++) {
+    $prev = $steps[$i-1];
+    $cur  = $steps[$i];
+    if ($prev[0] == "" || $cur[0] == "") continue; // skip empty (offboard) steps
+
+    // Each entry: [ location, facing, moveType ]
+    $segments[] = array(
+      'from_hex'    => $prev[0],
+      'to_hex'      => $cur[0],
+      'from_facing' => $prev[1],
+      'to_facing'   => $cur[1],
+      'type'        => ($cur[2] === "" ? "move" : $cur[2])
+    );
+  }
+  return $segments;
+}
+
+###
+# Convert a sequence of segments into a single continuous SVG path (polygonal ribbon).
+# Uses locationPixels() to convert hex -> pixel center.
+###
+function convertSegmentsToSvgPath($segments) {
+  if (empty($segments)) return "";
+
+  // Build list of center points in order
+  $points = array();
+  // first point: from_hex of first segment
+  $first = $segments[0]['from_hex'];
+  $p = locationPixels($first);
+  $points[] = array('x'=>$p[0],'y'=>$p[1]);
+  foreach ($segments as $seg) {
+    $p = locationPixels($seg['to_hex']);
+    $points[] = array('x'=>$p[0],'y'=>$p[1]);
+  }
+
+  $n = count($points);
+  if ($n < 2) return "";
+
+  // Determine per-segment half-widths
+  $NORMAL_W = defined('TRAIL_NORMAL_W') ? TRAIL_NORMAL_W : 6;
+  $SIDESLIP_W = defined('TRAIL_SIDESLIP_W') ? TRAIL_SIDESLIP_W : 12;
+
+  $halfWidths = array();
+  for ($i = 0; $i < $n-1; $i++) {
+    $type = $segments[$i]['type'];
+    $w = ($type === 'side-slip') ? $SIDESLIP_W : $NORMAL_W;
+    $halfWidths[$i] = $w / 2.0;
+  }
+
+  // For each point compute offset vectors using adjacent segment directions.
+  $left_pts = array();
+  $right_pts = array();
+  for ($i = 0; $i < $n; $i++) {
+    if ($i == 0) {
+      $p1 = $points[0];
+      $p2 = $points[1];
+      $dx = $p2['x'] - $p1['x'];
+      $dy = $p2['y'] - $p1['y'];
+      $len = sqrt($dx*$dx + $dy*$dy) ?: 1;
+      $nx = -$dy / $len;
+      $ny = $dx / $len;
+      $w = $halfWidths[0];
+    } elseif ($i == $n-1) {
+      $p1 = $points[$n-2];
+      $p2 = $points[$n-1];
+      $dx = $p2['x'] - $p1['x'];
+      $dy = $p2['y'] - $p1['y'];
+      $len = sqrt($dx*$dx + $dy*$dy) ?: 1;
+      $nx = -$dy / $len;
+      $ny = $dx / $len;
+      $w = $halfWidths[$n-2];
+    } else {
+      // junction: use min of adjacent half widths to avoid spikes
+      $p_prev = $points[$i-1];
+      $p_next = $points[$i+1];
+      $dx = $p_next['x'] - $p_prev['x'];
+      $dy = $p_next['y'] - $p_prev['y'];
+      $len = sqrt($dx*$dx + $dy*$dy) ?: 1;
+      $nx = -$dy / $len;
+      $ny = $dx / $len;
+      $w = min($halfWidths[$i-1], $halfWidths[$i]);
+    }
+    $left_pts[]  = array($points[$i]['x'] + $nx * $w, $points[$i]['y'] + $ny * $w);
+    $right_pts[] = array($points[$i]['x'] - $nx * $w, $points[$i]['y'] - $ny * $w);
+  }
+
+  // Build path: left points in order, then right points in reverse, close.
+  $d = "";
+  $d .= "M " . round($left_pts[0][0],2) . " " . round($left_pts[0][1],2) . " ";
+  for ($i = 1; $i < count($left_pts); $i++) {
+    $d .= "L " . round($left_pts[$i][0],2) . " " . round($left_pts[$i][1],2) . " ";
+  }
+  for ($i = count($right_pts)-1; $i >= 0; $i--) {
+    $d .= "L " . round($right_pts[$i][0],2) . " " . round($right_pts[$i][1],2) . " ";
+  }
+  $d .= "Z";
+  return $d;
+}
+
+###
+# Render the unit's trail as a single SVG <path> element.
+# Color is chosen via fill color of the marker
+###
+function renderUnitTrail($unit, $impulse) {
+  global $MOVEMENTTRAILS, $MODEL_NAME, $log;
+
+  if ($MOVEMENTTRAILS <= 0) return "";
+  if (!isset($unit['name']) || !isset($unit['type'])) return "";
+  if (!isset($MODEL_NAME[$unit['type']]['fill'])) return "";
+
+  $color = $MODEL_NAME[$unit['type']]['fill'];
+  $prefix = "<!-- Trail for {$unit['type']} -->";
+
+  $segments = buildTrailSegmentsForFrame($unit['name'], $impulse, $MOVEMENTTRAILS);
+  if (empty($segments)) return "";
+
+  $pathD = convertSegmentsToSvgPath($segments);
+  if (empty($pathD)) return "";
+
+  return $prefix . "<path d='${pathD}' fill='${color}' stroke='${color}' opacity='" . TRAIL_OPACITY . "' />\\n";
+}
+
+###
 # Draw a line between two units or hexes (for tractor/weapon)
 ###
 function draw_effect_line($fromLoc, $toUnit, $color, $impulse) {
@@ -674,13 +884,14 @@ function draw_effect_line($fromLoc, $toUnit, $color, $impulse) {
 # CLI help output
 ###
 function errorOut($message) {
-  global $argv, $FRAMESPERACTION, $FRAMESFORMOVE;
+  global $argv, $FRAMESPERACTION, $FRAMESFORMOVE, $MOVEMENTTRAILS;
   echo "\n";
   if ($message !== null && $message != "") echo $message . "\n\n";
   echo "Usage:\n  {$argv[0]} [OPTIONS..] /path/to/log\n";
   echo "Options:\n";
   echo "  -a, --action <n>    Frames per action segment (default $FRAMESPERACTION)\n";
   echo "  -m, --move <n>      Frames per movement segment (default $FRAMESFORMOVE)\n";
+  echo "  -t, --trails <n>    Show a movement trail for <n> impulses. 0 for none. (default $MOVEMENTTRAILS)\n";
   echo "  -x, --no_action     Skip impulses with no activity\n";
   echo "  -q, --quiet         Suppress console output\n";
   echo "  -h, --help          Show this help message\n";
