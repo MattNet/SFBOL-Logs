@@ -404,13 +404,11 @@ class LogFile
           case "ppd":
             $phase = self::SEQUENCE_PPDS;
             break;
-          case "web":
-            $phase = self::SEQUENCE_CAST_WEB;
-            break;
           case "drone":
           case "plasma":
           case "ship":
           case "shuttle":
+          case "web":
           default:
             $phase = self::SEQUENCE_IMPULSE_END;
             break;
