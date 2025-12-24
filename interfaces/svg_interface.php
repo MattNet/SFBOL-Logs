@@ -69,7 +69,7 @@ $MODEL_NAME = array(
   'Fed TCC (G-Rack) (Playtest)' => array( "name" => 'fedca', 'no_rotate' => false, 'colorSource' => '' ),
   'Fed TCC (Official' => array( "name" => 'fedca', 'no_rotate' => false, 'colorSource' => '' ),
   'Frax TC (Playtest)' => array( "name" => 'fraca', 'no_rotate' => false, 'colorSource' => '' ),
-  'Gorn TCC' => array( "name" => 'gorca', 'no_rotate' => false, 'colorSource' => '' ),
+  'Gorn TCC' => array( "name" => 'gorbc', 'no_rotate' => false, 'colorSource' => '' ),
   'Hydran Tarter (Playtest)' => array( "name" => 'hydmng', 'no_rotate' => false, 'colorSource' => '' ),
   'Hydran TLM' => array( "name" => 'hydcc', 'no_rotate' => false, 'colorSource' => '' ),
   'ISC TCC' => array( "name" => 'iscca', 'no_rotate' => false, 'colorSource' => '' ),
