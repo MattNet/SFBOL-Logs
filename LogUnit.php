@@ -81,7 +81,7 @@ class LogUnit
       $log = explode( "\n", $log );
     else if( is_array( $log ) != true ) # if the log data is not an array or string, then exit
     {
-      $error .= " Input of ".self::class." constructor is not a string or array.";
+      $this->error .= " Input of ".self::class." constructor is not a string or array.\n";
       return( 1 );
     }
 
@@ -94,7 +94,7 @@ class LogUnit
       {
         $this->pointerTime = self::convertToImp( $matches[1] );
         if( $this->pointerTime === null )
-          $this->error .= "Impulse conversion in the wrong format. Given '{$matches[1]}',  Unit '".$this->name."'.";
+          $this->error .= "Impulse conversion in the wrong format. Given '{$matches[1]}', Unit '".$this->name."'.\n";
         continue; # Go to next line if the FRAMEREGEX matched
       }
 
@@ -213,7 +213,8 @@ class LogUnit
           $reason = $moves; # set to the number of movement since the last turn if not a HET or TAC
 
         # fill out the object and tag information
-        $output = array( "facing"=>$newFacing, "owner"=>$this->name, "speed"=>$this->pointerSpeed, "turn"=>$reason );
+        $output = array( "facing"=>$newFacing, "location"=>$this->lastLocation,
+                         "owner"=>$this->name, "speed"=>$this->pointerSpeed, "turn"=>$reason );
         $this->pointerFacing = $newFacing; # set pointerFacing after the HET check
 
         # add the tag information to the impulse
@@ -244,7 +245,6 @@ class LogUnit
         $output = array( "facing"=>$facing, "location"=>$location, "owner"=>$this->name, "speed"=>$this->pointerSpeed, "turn"=>$reason );
         $this->pointerFacing = $facing; # set pointerFacing after the HET check
         $this->lastLocation = $location; # update the latest location
-
         # An exception to moving:
         # If moved on the same impulse as added, then update the add to the new location. Do not move the unit.
         if( isset( $this->impulses[ $this->pointerTime ]["add"] ) )
@@ -257,7 +257,6 @@ class LogUnit
         if( ! isset($this->impulses[ $this->pointerTime ]) )
           $this->impulses[ $this->pointerTime ] = array();
         $this->impulses[ $this->pointerTime ]["location"] = $output;
-
         continue; # Go to next line if the LOCATIONREGEX matched
       }
   # REMOVEREGEX
@@ -377,7 +376,7 @@ class LogUnit
         {
           $this->pointerTime = self::convertToImp( $matches[1] );
           if( $this->pointerTime === null )
-            $this->error .= "Impulse conversion in the wrong format. Given '{$matches[1]}',  Unit '".$this->name."'.";
+            $this->error .= "Impulse conversion in the wrong format. Given '{$matches[1]}',  Unit '".$this->name."'.\n";
           continue; # Go to next line if the FRAMEREGEX matched
         }
     # CLOAKREGEX
