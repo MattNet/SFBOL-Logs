@@ -70,6 +70,7 @@ $MODEL_NAME = array(
   'Fed TCC (Official' => array( "name" => 'fedca', 'no_rotate' => false, 'colorSource' => '' ),
   'Frax TC (Playtest)' => array( "name" => 'fraca', 'no_rotate' => false, 'colorSource' => '' ),
   'Gorn TCC' => array( "name" => 'gorca', 'no_rotate' => false, 'colorSource' => '' ),
+  'Hydran Tarter (Playtest)' => array( "name" => 'hydmng', 'no_rotate' => false, 'colorSource' => '' ),
   'Hydran TLM' => array( "name" => 'hydcc', 'no_rotate' => false, 'colorSource' => '' ),
   'ISC TCC' => array( "name" => 'iscca', 'no_rotate' => false, 'colorSource' => '' ),
   'Klingon TD7C' => array( "name" => 'klid6', 'no_rotate' => false, 'colorSource' => '' ),
@@ -628,7 +629,6 @@ function process_movement($impulseData, &$unitList, $i) {
       if (isset($action["facing"]))
         $unitList[$name]["facing"] = $action["facing"];
       if (isset($action['turn']) && $action['turn'] == 'HET') {
-//var_dump($action);
         list($x, $y) = locationPixels($action["location"]);
         $svg .= drawBalloon($x, $y, "HET");
       }
