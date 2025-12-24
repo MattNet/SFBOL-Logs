@@ -115,6 +115,7 @@ $MODEL_NAME = array(
   'Romulan Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false, 'colorSource' => 'Romulan TKR' ),
   'Vudar Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false, 'colorSource' => 'Vudar TCA' ),
   'Wyn TAxBC Drone' => array( "name" => 'alldrone', 'no_rotate' => false, 'colorSource' => 'Wyn TAxBC' ),
+  'Wyn GBS Drone' => array( "name" => 'alldrone', 'no_rotate' => false, 'colorSource' => 'Wyn GBS' ),
   'WYN ESG' => array( "name" => 'ESG', 'no_rotate' => true, 'colorSource' => '' ),
   'WYN Plasma' => array( "name" => 'allplasma', 'no_rotate' => false, 'colorSource' => 'Wyn TAxBC' ),
   'Wyn TAxBC Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false, 'colorSource' => 'Wyn TAxBC' ),
