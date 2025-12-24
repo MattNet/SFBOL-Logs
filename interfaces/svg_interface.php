@@ -54,6 +54,9 @@ define('COLOR_WEAPON', '#FF4500');
 define('COLOR_DAMAGE', '#3333FF');
 define('TRAIL_OPACITY', 0.75);
 
+define('HEX_LABEL_FONT_SIZE', 11);
+define('CARD_LABEL_FONT_SIZE', 11);
+
 ###
 # Lookup table for unit-type (per the log file) to named Blender model
 # e.g. "Gozilla (Type:Gorn TCC) has been added at ..."
@@ -151,7 +154,7 @@ if ($CLI === false || empty($CLIend)) errorOut("Could not read command line argu
 # Input file handling
 ###
 $readFile = $CLIend[0];
-if (!isset($readFile) || !is_readable($readFile)) errorOut("Cannot read file '$readFile'.");
+if (!isset($readFile) || !is_file($readFile) || !is_readable($readFile)) errorOut("Cannot read file '$readFile'.");
 
 $input = file_get_contents($readFile);
 if ($input === false) errorOut("Failed to read '$readFile'.");
@@ -319,7 +322,7 @@ function hex_to_pixel($col, $row) {
 # a continuous spine with 3 increments per hex.
 function build_hex_column_path($col, $rows) {
   global $SHOWNUMBERS;
-  $fontSize = 11; // for text placement
+  $fontSize = HEX_LABEL_FONT_SIZE; // for text placement
 
   $text = "\n";
   $path = "";
@@ -598,7 +601,7 @@ function facingToAngle($facing) {
 }
 
 ###
-# Process activity segment: tractors, cloaks, launches, etc.
+# Show what turn / impulse that the current frame is showing
 ###
 function show_clock($impulse) {
   $time = LogUnit::convertFromImp($impulse);
@@ -624,6 +627,11 @@ function process_movement($impulseData, &$unitList, $i) {
       }
       if (isset($action["facing"]))
         $unitList[$name]["facing"] = $action["facing"];
+      if (isset($action['turn']) && $action['turn'] == 'HET') {
+//var_dump($action);
+        list($x, $y) = locationPixels($action["location"]);
+        $svg .= drawBalloon($x, $y, "HET");
+      }
     }
   }
   $svg .= "</g>\n";
@@ -641,11 +649,14 @@ function process_activity($impulseData, &$unitList, $impulse) {
 
     foreach ($actions as $action) {
       if ($sequence == LogFile::SEQUENCE_TRACTORS) {
+        list($x, $y) = locationPixels($action["owner location"]);
         $svg .= draw_effect_line($action["owner location"], $action["target"], COLOR_TRACTOR, $impulse);
+        $svg .= drawBalloon($x, $y, "Tractor");
       }
       if ($sequence == LogFile::SEQUENCE_CLOAKING_DEVICE) {
         list($x, $y) = locationPixels($action["owner location"]);
         $svg .= "<circle cx='$x' cy='$y' r='20' fill='none' stroke='gray' stroke-dasharray='5,3' />\n";
+        $svg .= drawBalloon($x, $y, "Cloak");
       }
       // launched shuttles or seeking weapons
       $svg .= process_unit_adds($unitList, $sequence, $action);
@@ -654,8 +665,6 @@ function process_activity($impulseData, &$unitList, $impulse) {
   $svg .= "</g>\n";
   return $svg;
 }
-/*if($impulse==30)print_r($unit);
-if($impulse>30)exit;*/
 
 ###
 # Process weapons fire segment
@@ -729,7 +738,59 @@ function process_unit_adds(&$units, $segment, $impulseAction) {
     list($x, $y) = locationPixels($impulseAction["location"]);
     if (count($units[$name]["trail"]) > 16)
       array_shift($units[$name]["trail"]);
+    switch ($segment) {
+    case LogFile::SEQUENCE_LAUNCH_PLASMA:
+      $svg .= drawBalloon($x, $y, "Launch Plasma");
+      break;
+    case LogFile::SEQUENCE_LAUNCH_DRONES:
+      $svg .= drawBalloon($x, $y, "Launch Drone");
+      break;
+    case LogFile::SEQUENCE_LAUNCH_SHUTTLES:
+      $svg .= drawBalloon($x, $y, "Launch Shuttle");
+      break;
+    default:
+      break;
+    }
   }
+  return $svg;
+}
+
+###
+# Draw a text-balloon to give a short message of activity (launch, HET, etc)
+###
+function drawBalloon(float $x, float $y, string $message): string
+{
+  $fontSize = CARD_LABEL_FONT_SIZE;
+  $padding = 0.5;
+  $lineHeight = 2.0;
+
+  // Derived dimensions
+  $textLength = mb_strlen($message);
+  $textWidth = $textLength * 0.6 * $fontSize; // approx width per character
+  $rectWidth = $textWidth + (2 * $padding * $fontSize);
+  $rectHeight = $lineHeight * $fontSize;
+
+  // Balloon geometry
+  $cornerRadius = 0.5 * $fontSize;
+  $tipHeight = 0.75 * $fontSize;
+  $tipWidth = 1.0 * $fontSize;
+
+  // Positioning: balloon above the hex center
+  $rectX = $x - ($rectWidth / 2);
+  $rectY = $y - (MARKER_HEIGHT / 3) - $rectHeight - $tipHeight;
+
+  // Triangle points
+  $tipX1 = $x - ($tipWidth / 2);
+  $tipX2 = $x + ($tipWidth / 2);
+  $tipY1 = $rectY + $rectHeight;
+  $tipY2 = $tipY1 + $tipHeight;
+
+  $svg = "<g class='activity-balloon'>\n";
+  $svg .= "<rect x='$rectX' y='$rectY' rx='$cornerRadius' ry='$cornerRadius' width='$rectWidth' height='$rectHeight' fill='#ffffff' stroke='#000000' stroke-width='1' />\n";
+  $svg .= "<polygon points='$tipX1,$tipY1 $tipX2,$tipY1 $x,$tipY2' fill='#ffffff' stroke='#000000' stroke-width='1' />\n";
+  $svg .= "<text x='$x' y='". ($rectY + ($rectHeight / 2)) . "' font-size='$fontSize' text-anchor='middle' dominant-baseline='middle' fill='#000000'>$message</text>\n";
+  $svg .= "</g>\n";
+
   return $svg;
 }
 
