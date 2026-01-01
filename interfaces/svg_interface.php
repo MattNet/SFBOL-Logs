@@ -111,6 +111,7 @@ $MODEL_NAME = array(
   'Orion Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false, 'colorSource' => 'Orion TBR' ),
   'TFE Plasma' => array( "name" => 'allplasma', 'no_rotate' => false, 'colorSource' => 'Romulan TFH' ),
   'TKE Plasma' => array( "name" => 'allplasma', 'no_rotate' => false, 'colorSource' => 'Romulan TKE' ),
+  'TKE Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false, 'colorSource' => 'Romulan TKE' ),
   'TKR Plasma' => array( "name" => 'allplasma', 'no_rotate' => false, 'colorSource' => 'Romulan TKR' ),
   'Romulan Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false, 'colorSource' => 'Romulan TKR' ),
   'Vudar Shuttle' => array( "name" => 'alladmin', 'no_rotate' => false, 'colorSource' => 'Vudar TCA' ),
