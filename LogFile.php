@@ -6,8 +6,20 @@
 # - Populates itself from the provided log. This is a large string, as if from file_get_contents()
 # read( $impulse )
 # - Returns an array of each item that occurs during the given turn.impulse
-# precedence()
-# - Returns a list of each item, in order, than can occur in an impulse
+# readAll( $unitName )
+# - Shows all impulses from a certain unit
+# get_sequence()
+# - Returns a list of each segment, in order, than can occur in an impulse
+# get_unit_facing( $unitName, $time )
+# - Retrieve a unit's facing
+# get_unit_location( $unitName, $time )
+# - Retrieve a unit's location
+# get_unit_location_trail( $unitName, $time, $amt )
+# - Retrieve a unit's location for several impulses
+# get_units ()
+# - Shows all of the units used in the game
+# get_weapons( $name )
+# - Shows all of the weapons that have been fired, by the named unit
 ###
 
 require_once( __DIR__."/LogUnit.php" );
@@ -151,11 +163,17 @@ class LogFile
   ###
   function get_unit_location( $unitName, $time )
   {
+    if( ! isset($this->UNIT_LOOKUP[ $unitName ]) ){
+      $this->error .= "Unable to find '$unitName' in get_unit_loction()";
+      return "0000";
+    }
     $lookup = $this->UNIT_LOOKUP[ $unitName ];
     $unit = $this->UNITS[ $lookup ];
     $location = $unit->getCurrentLocation( $time );
-    if( ! $location )
+    if( ! $location ){
       $this->error .= $unit->error;
+      return "0000";
+    }
     return $location;
   }
 
@@ -181,6 +199,35 @@ class LogFile
     $unit = $this->UNITS[ $lookup ];
     $location = $unit->getLocationTrail( $time, $amt );
     return $location;
+  }
+
+  ###
+  # Determines the range between two items for a given impulse
+  ###
+  # Args are:
+  # - (string) The name of the unit to examine
+  # - (string) The name of the unit to examine
+  # - (string) The impulse to examine, in 'turn.impulse' notation
+  # Returns:
+  # - (int) The number of hexes between the two units, plus the hex of the final unit
+  #         e.g. units in neighboring hexes will give a range of 1
+  function get_unit_range($unitA, $unitB, $time)
+  {
+    $locA = $this->get_unit_location( $unitA, $time );
+    $locB = $this->get_unit_location( $unitB, $time );
+
+    # Parse the CCRR format
+    [$colA, $rowA] = sscanf($locA, "%2d%2d");
+    [$colB, $rowB] = sscanf($locB, "%2d%2d");
+
+    # Offset for shifted odd columns
+    $rowA = $rowA - intdiv(($colA - 1), 2);
+    $rowB = $rowB - intdiv(($colB - 1), 2);
+
+    # get Axial Distance
+    $dq = $colB - $colA;
+    $dr = $rowB - $rowA;
+    return intdiv(abs($dq) + abs($dr) + abs($dq + $dr), 2);
   }
 
   ###

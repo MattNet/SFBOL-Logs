@@ -532,6 +532,7 @@ class LogUnit
     if( $this->removed < $time || $this->added > $time )
     {
       $this->error .= "Time given to ".self::class."->getCurrentLocation() is not recorded in the log file: Unit '".$this->name."', at $time\n";
+      $this->error .= "Perhaps there was a resync at that time?\n";
       return NULL;
     }
 
