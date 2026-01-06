@@ -214,7 +214,7 @@ class LogUnit
 
         # fill out the object and tag information
         $output = array( "facing"=>$newFacing, "location"=>$this->lastLocation,
-                         "owner"=>$this->name, "speed"=>$this->pointerSpeed, "turn"=>$reason );
+                         "owner"=>$this->name, "speed"=>$this->pointerSpeed, "turn"=>$reason, "type"=>$this->type );
         $this->pointerFacing = $newFacing; # set pointerFacing after the HET check
 
         # add the tag information to the impulse
@@ -242,7 +242,7 @@ class LogUnit
         }
 
         # fill out the object and tag information
-        $output = array( "facing"=>$facing, "location"=>$location, "owner"=>$this->name, "speed"=>$this->pointerSpeed, "turn"=>$reason );
+        $output = array( "facing"=>$facing, "location"=>$location, "owner"=>$this->name, "speed"=>$this->pointerSpeed, "turn"=>$reason, "type"=>$this->type );
         $this->pointerFacing = $facing; # set pointerFacing after the HET check
         $this->lastLocation = $location; # update the latest location
         # An exception to moving:
@@ -281,7 +281,7 @@ class LogUnit
       {
         # fill out the object and tag information
         $this->pointerSpeed = intval($matches[3]);
-        $output = array( "owner"=>$this->name, "speed"=>$this->pointerSpeed );
+        $output = array( "owner"=>$this->name, "speed"=>$this->pointerSpeed, "type"=>$this->type );
 
         # add the tag information to the impulse
         if( ! isset($this->impulses[ $this->pointerTime ]) )
@@ -296,7 +296,8 @@ class LogUnit
       {
         # fill out the tag information
         $output = array( "owner"=>$this->name, "owner location" => $this->lastLocation,
-                         "target"=>$matches[2], "tractordown"=>$this->pointerTime
+                         "target"=>$matches[2], "tractordown"=>$this->pointerTime,
+                         "type"=>$this->type
                        );
 
         # add the tag information to the impulse
@@ -331,7 +332,8 @@ class LogUnit
         # fill out the object and tag information
         $output = array( "arc"=>$arc, "id"=>$wpnID, "owner"=>$this->name,
                          "owner location" => $this->lastLocation, 
-                         "range"=>$range, "target"=>$target, "weapon"=>$wpn
+                         "range"=>$range, "target"=>$target, "type"=>$this->type,
+                         "weapon"=>$wpn
                        );
 
         # Add to $this->weapons
