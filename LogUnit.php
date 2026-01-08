@@ -54,6 +54,8 @@ class LogUnit
   private $FACINGREGEX = "/^(.+) has changed to facing (\w+) after (.+) move\(s\)$/";
   private $FRAMEREGEX = "/^Impulse (\d*\.\d*):$/";
   private $INTERNALSREGEX = "/^Total # of Internals = (\d+)$/";
+  private $LAUNCHDRONE = "/^(.*) launches drone (.*), Location: (\d{4,4})(\w+)$/";
+  private $LAUNCHPLASMA = "/^(.*) launches plasma (.*), Location: (\d{4,4})(\w+)$/";
   private $LOCATIONREGEX = "/^(.*) has (moved|side-slipped|turned) to (\d{4,4})(\w+)$/";
   private $REMOVEREGEX = "/^(.+) has been (?:removed|discarded)$/";
   private $SPEEDREGEX = "/^(.+) (changed|initial) speed to (\d+)$/";
@@ -223,6 +225,30 @@ class LogUnit
         $this->impulses[ $this->pointerTime ]["facing"] = $output;
 
         continue; # Go to next line if the FACINGREGEX matched
+      }
+  # LAUNCHDRONE
+      $status = preg_match( $this->LAUNCHDRONE, $line, $matches );
+      if( $status == 1 && $matches[1] == $this->name )
+      {
+        list( , $droneName, $location, $facing ) = $matches;
+        # fill out the object and tag information
+        $output = array( "owner"=>$this->name, "type"=>$this->type, "launchType"=>"drone", "launchName" => $droneName );
+        # add the tag information to the impulse
+        if( ! isset($this->impulses[ $this->pointerTime ]) )
+          $this->impulses[ $this->pointerTime ] = array();
+        $this->impulses[ $this->pointerTime ]["launchDrone"] = $output;
+      }
+  # LAUNCHPLASMA
+      $status = preg_match( $this->LAUNCHPLASMA, $line, $matches );
+      if( $status == 1 && $matches[1] == $this->name )
+      {
+        list( , $plasmaName, $location, $facing ) = $matches;
+        # fill out the object and tag information
+        $output = array( "owner"=>$this->name, "type"=>$this->type, "launchType"=>"plasma", "launchName" => $plasmaName );
+        # add the tag information to the impulse
+        if( ! isset($this->impulses[ $this->pointerTime ]) )
+          $this->impulses[ $this->pointerTime ] = array();
+        $this->impulses[ $this->pointerTime ]["launchPlasma"] = $output;
       }
   # LOCATIONREGEX
       $status = preg_match( $this->LOCATIONREGEX, $line, $matches );

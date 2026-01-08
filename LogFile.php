@@ -318,6 +318,19 @@ class LogFile
       {
         switch( $key )
         {
+        case "launchDrone":
+          $phase = self::SEQUENCE_LAUNCH_DRONES;
+          if( ! isset($output[ $phase ]) || ! is_array($output[ $phase ]) )
+            $output[ $phase ] = array();
+          $output[ $phase ][] = $value;
+          break;
+        case "launchPlasma":
+          $phase = self::SEQUENCE_LAUNCH_PLASMA;
+          if( ! isset($output[ $phase ]) || ! is_array($output[ $phase ]) )
+            $output[ $phase ] = array();
+          $output[ $phase ][] = $value;
+          break;
+
         case "add":
           switch( $unit->basicType )
           {
@@ -349,7 +362,6 @@ class LogFile
           if( ! isset($output[ $phase ]) || ! is_array($output[ $phase ]) )
             $output[ $phase ] = array();
           $output[ $phase ][] = $value;
-
           break;
 
         case "cloak":
@@ -430,6 +442,18 @@ class LogFile
           foreach( $value as $out )
             $output[ $phase ][] = $out;
 
+          break;
+        case "launchDrone":
+          $phase = self::SEQUENCE_LAUNCH_DRONE;
+          if( ! isset($output[ $phase ]) || ! is_array($output[ $phase ]) )
+            $output[ $phase ] = array();
+          $output[ $phase ][] = $value;
+          break;
+        case "launchPlasma":
+          $phase = self::SEQUENCE_LAUNCH_PLASMA;
+          if( ! isset($output[ $phase ]) || ! is_array($output[ $phase ]) )
+            $output[ $phase ] = array();
+          $output[ $phase ][] = $value;
           break;
         case "speed":
           $phase = self::SEQUENCE_SPEED_CHANGES;
