@@ -10,18 +10,9 @@
 ###
 include_once("../LogFile.php");
 
-const EVENT_RANGE_CHANGE   = 'range_change';
-const EVENT_LAUNCH         = 'launch';
-const EVENT_FIRE           = 'fire';
-const EVENT_DAMAGE         = 'damage';
-const EVENT_MANEUVER       = 'maneuver';
-const EVENT_POWER          = 'power_change';
-const EVENT_STATUS         = 'status_change';
-const EVENT_END_STATE      = 'end_state';
-const EVENT_UNKNOWN        = 'unknown';
-
 $options = array( // CLI options
   'brief' => false,
+  'debug' => false,
   'header' => true,
   'footer' => false,
   'output' => null,
@@ -32,7 +23,7 @@ $options = array( // CLI options
 ###
 
 $CLIoptions = "";
-$CLIoptions .= "o::bfhn";
+$CLIoptions .= "o::bdfhn";
 $CLIlong = array("out::", "help");
 
 $CLI = getopt($CLIoptions, $CLIlong, $rest_index);
@@ -43,6 +34,8 @@ if (isset($CLI["o"])) $options['output'] = (int)$CLI["o"];
 if (isset($CLI["out"])) $options['output'] = (int)$CLI["out"];
 if (isset($CLI["b"])) $options['brief'] = true;
 if (isset($CLI["brief"])) $options['brief'] = true;
+if (isset($CLI["d"])) $options['debug'] = true;
+if (isset($CLI["debug"])) $options['debug'] = true;
 if (isset($CLI["f"])) $options['footer'] = true;
 if (isset($CLI["footer"])) $options['footer'] = true;
 if (isset($CLI["n"])) $options['header'] = false;
@@ -96,6 +89,13 @@ for ($i = 0; $i <= $LastLine; $i++) { // $i = impulse in numeric notation
   $impulseData[] = $log->read($impulse);
 }
 $turns = reconstructTurns($impulseData);
+if($options['debug']) {
+  $debug = json_encode($turns);
+  $debug = preg_replace('/:\[/', ":\n   \[", $debug); // non-associative keys
+  $debug = preg_replace('/},\s*{/', "},\n   {", $debug); // between records
+  $debug = preg_replace('/:{/', ":\n      {", $debug); // values that are objects
+  echo "$debug\n";
+}
 // once the turns are build, classify the events
 foreach( $turns as &$turn){
   foreach( $turn as &$imp){
@@ -110,7 +110,7 @@ $aarNarrative = synthesizeNarrative($turns);
 ###
 $lines = [];
 
-if ($options['header']) {
+if (!$options['header']) {
   $lines[] = "### AFTER-ACTION REPORT ###";
   $lines[] = "";
 }
@@ -211,7 +211,7 @@ function classifyEvent(array $entry): ?array
 {
     if (!isset($entry['segment'], $entry['event'])) return null;
 
-    global $log,$principalUnits,$unitNameLookup;
+    global $log,$principalUnits,$unitNameLookup,$unitCache;
     $segment = $entry['segment'];
     $event   = $entry['event'];
 
@@ -250,18 +250,22 @@ function classifyEvent(array $entry): ?array
           if ($weight < 20) return null;
           return buildClassifiedEvent($entry, 'movement', $weight, $data, $actors);
           break;
-//if($event['turn']!="move"){print_r($entry);exit();}//$unitNameLookup;
 
         case $log::SEQUENCE_FIRE_DECLARATION:
         case $log::SEQUENCE_CAST_WEB:
-          if (empty($event['weapon'])) return null;
+          if (empty($event['weapon']) || !isset($event['target'])) return null;
           $data = [ 'weapon' => $event['weapon'] ];
           $actors = ['role' => 'attacker', 'name' => $event['owner'], 'unit' => $event['type'], 'defender' => $unitNameLookup[$event['owner']] ];
+          $target = array();
+          foreach($unitCache as $UC) {
+            if($UC['name'] !== $event['target']) continue;
+            $target = $UC;
+            break;
+          }
 
-          if (isset($event['hits'])) $data['hits'] = $event['hits'];
-          if (isset($event['damage']) && $event['damage'] > 0) {
-            $data['damage'] = $event['damage'];
-            $weight = min(100, 40 + $event['damage']);
+          if( $target["basic"] == "ship") {
+            $data['target'] = $target['name'];
+            $weight = 40;
           } else {
             $weight = 15;
           }
@@ -271,18 +275,15 @@ function classifyEvent(array $entry): ?array
 
         case $log::SEQUENCE_LAUNCH_PLASMA:
         case $log::SEQUENCE_LAUNCH_DRONES:
+          if(!isset($event['launchType'])) return null;
           $data = [];
-          $actors = ['role' => 'launcher', 'unit' => $event['type'], 'launchedType' => $unitNameLookup[$event['owner']] ];
+          $actors = ['role' => 'launcher', 'unit' => $event['type'], 'launchedType' => $event['launchType'] ];
 
-          if (!empty($event['launch'])) {
-            $data['launch'] = $event['launch'];
-            $weight = 50;
-          } elseif (!empty($event['impact'])) {
-            $data['impact'] = $event['impact'];
+          $data['launch'] = $event['launchType'];
+          if($event['launchType'] == "plasma")
             $weight = 70;
-          } else {
-            return null;
-          }
+          if($event['launchType'] == "drone")
+            $weight = 50;
           return buildClassifiedEvent($entry, 'seeking', $weight, $data, $actors);
           break;
 
@@ -378,8 +379,7 @@ function buildClassifiedEvent(array $entry, string $category, int $weight, array
 # report emphasizing decisions and outcomes rather than mechanics.
 #
 # @param array $classifiedTurns Array indexed by turn number,
-#                               each value is an array of classified events
-#                               as returned by classifyEvent()
+#    each value is an array of classified events as returned by classifyEvent()
 #
 # @return string Fully formatted narrative text, divided by turns
 ###
@@ -526,17 +526,13 @@ function narrateEventChain(array $chain): string
 
         case 'seeking':
           foreach ($chain as $e) {
-            if (isset($e['data']['impact'])) {
+            if (isset($e['data']['launch'])) {
               if($primary !== null)
-                return "$primary suffers seeking weapons impacts.";
+                return "$primary launches {$e['data']['launch']}(s).";
               else
-                return "Seeking weapons impact.";
+                return "{$e['data']['launch']} launch(es).";
             }
           }
-          if($primary !== null)
-            return "$primary launches seeking weapons.";
-          else
-            return "Launches seeking weapons.";
           break;
 
         case 'damage':
@@ -614,6 +610,10 @@ function errorOut(string $message): void {
   echo "Usage:\n  {$argv[0]} [OPTIONS..] /path/to/log\n";
   echo "Options:\n";
   echo "  -o, --out <FILE>    Write to this file\n";
+  echo "  -b, --brief         Be brief in the output\n";
+  echo "  -d, --debug         Show debug info\n";
+  echo "  -f, --footer        Don't show the footer\n";
+  echo "  -n, --no-header     Don't show the header\n";
   echo "  -h, --help          Show this help message\n";
   exit(1);
 }
