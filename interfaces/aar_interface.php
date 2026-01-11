@@ -88,14 +88,27 @@ for ($i = 0; $i <= $LastLine; $i++) { // $i = impulse in numeric notation
   $impulse = LogUnit::convertFromImp($i); // $impulse = impulse in 'turn.impulse" notation
   $impulseData[] = $log->read($impulse);
 }
-$turns = reconstructTurns($impulseData);
+
 if($options['debug']) {
-  $debug = json_encode($turns);
-  $debug = preg_replace('/:\[/', ":\n   \[", $debug); // non-associative keys
-  $debug = preg_replace('/},\s*{/', "},\n   {", $debug); // between records
-  $debug = preg_replace('/:{/', ":\n      {", $debug); // values that are objects
+  $debug = json_encode($impulseData, JSON_PRETTY_PRINT);
+  $debug = preg_replace('/\"(.+),+?\n/', "\"$1,", $debug);
+  if(strpos($debug,"{") === false && strpos($debug,"[") === false &&
+     strpos($debug,"}") === false && strpos($debug,"]") === false )
+     echo "hi\n";
+     $debug = trim($debug);
   echo "$debug\n";
 }
+
+$turns = reconstructTurns($impulseData);
+/*
+if($options['debug']) {
+  $debug = json_encode($turns);
+  $debug = preg_replace('/:\[/', ":\n   [", $debug); // non-associative keys
+  $debug = preg_replace('/},\s*{/', "},\n   {", $debug); // between records
+  $debug = preg_replace('/:\{/', ":\n      {", $debug); // values that are objects
+  echo "$debug\n";
+}
+*/
 // once the turns are build, classify the events
 foreach( $turns as &$turn){
   foreach( $turn as &$imp){
