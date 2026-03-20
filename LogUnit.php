@@ -54,8 +54,8 @@ class LogUnit
   private $FACINGREGEX = "/^(.+) has changed to facing (\w+) after (.+) move\(s\)$/";
   private $FRAMEREGEX = "/^Impulse (\d*\.\d*):$/";
   private $INTERNALSREGEX = "/^Total # of Internals = (\d+)$/";
-  private $LAUNCHDRONE = "/^(.*) launches drone (.*), Location: (\d{4,4})(\w+)$/";
-  private $LAUNCHPLASMA = "/^(.*) launches plasma (.*), Location: (\d{4,4})(\w+)$/";
+  private $LAUNCHDRONE = "/^(.*) launches drone (.*), Location: (\d{4,4})(\w)$/";
+  private $LAUNCHPLASMA = "/^(.*) launches plasma (.*), Location: (\d{4,4})(\w)$/";
   private $LOCATIONREGEX = "/^(.*) has (moved|side-slipped|turned) to (\d{4,4})(\w+)$/";
   private $REMOVEREGEX = "/^(.+) has been (?:removed|discarded)$/";
   private $SPEEDREGEX = "/^(.+) (changed|initial) speed to (\d+)$/";
@@ -230,9 +230,9 @@ class LogUnit
       $status = preg_match( $this->LAUNCHDRONE, $line, $matches );
       if( $status == 1 && $matches[1] == $this->name )
       {
-        list( , $droneName, $location, $facing ) = $matches;
+        list( , , $droneName, $location, $facing ) = $matches;
         # fill out the object and tag information
-        $output = array( "owner"=>$this->name, "type"=>$this->type, "launchType"=>"drone", "launchName" => $droneName );
+        $output = array( "facing"=>$facing, "owner"=>$this->name, "type"=>$this->type, "launchType"=>"drone", "launchName" => $droneName, "location"=>$location );
         # add the tag information to the impulse
         if( ! isset($this->impulses[ $this->pointerTime ]) )
           $this->impulses[ $this->pointerTime ] = array();
@@ -242,9 +242,9 @@ class LogUnit
       $status = preg_match( $this->LAUNCHPLASMA, $line, $matches );
       if( $status == 1 && $matches[1] == $this->name )
       {
-        list( , $plasmaName, $location, $facing ) = $matches;
+        list( , , $plasmaName, $location, $facing ) = $matches;
         # fill out the object and tag information
-        $output = array( "owner"=>$this->name, "type"=>$this->type, "launchType"=>"plasma", "launchName" => $plasmaName );
+        $output = array( "facing"=>$facing, "owner"=>$this->name, "type"=>$this->type, "launchType"=>"plasma", "launchName" => $plasmaName, "location"=>$location );
         # add the tag information to the impulse
         if( ! isset($this->impulses[ $this->pointerTime ]) )
           $this->impulses[ $this->pointerTime ] = array();
