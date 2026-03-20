@@ -70,7 +70,9 @@ define( 'MODEL_NAME', array(
   'Orion Shuttle' => array( "name" => 'Federation Shuttle', 'no_rotate' => false ),
   'TFE Plasma' => array( "name" => 'Plasma', 'no_rotate' => false ),
   'TKE Plasma' => array( "name" => 'Plasma', 'no_rotate' => false ),
+  'TKE Shuttle' => array( "name" => 'Federation Shuttle', 'no_rotate' => false ),
   'TKR Plasma' => array( "name" => 'Plasma', 'no_rotate' => false ),
+  'TKR Shuttle' => array( "name" => 'Federation Shuttle', 'no_rotate' => false ),
   'Romulan Shuttle' => array( "name" => 'Federation Shuttle', 'no_rotate' => false ),
   'Vudar Shuttle' => array( "name" => 'Federation Shuttle', 'no_rotate' => false ),
   'Wyn TAxBC Drone' => array( "name" => 'Drone', 'no_rotate' => false ),
@@ -81,10 +83,12 @@ define( 'MODEL_NAME', array(
   'Andromedan DisDev' => array( "name" => 'DisDev Marker', 'no_rotate' => true ),
   'Card' => array( "name" => 'Card', 'no_rotate' => true ),
   'CamCard' => array( "name" => 'Camera Title', 'no_rotate' => true ),
-  'Front Shield' => array( "name" => 'shield.front', 'no_rotate' => false ),
-  'Left Shield' => array( "name" => 'shield.left', 'no_rotate' => false ),
-  'Rear Shield' => array( "name" => 'shield.rear', 'no_rotate' => false ),
-  'Right Shield' => array( "name" => 'shield.right', 'no_rotate' => false ),
+  'Shield A' => array( "name" => 'shield.front', 'no_rotate' => false ),
+  'Shield B' => array( "name" => 'shield.left', 'no_rotate' => false ),
+  'Shield C' => array( "name" => 'shield.left', 'no_rotate' => false ),
+  'Shield D' => array( "name" => 'shield.rear', 'no_rotate' => false ),
+  'Shield E' => array( "name" => 'shield.right', 'no_rotate' => false ),
+  'Shield F' => array( "name" => 'shield.right', 'no_rotate' => false ),
 ) );
 
 # these are configuration variables
@@ -525,7 +529,10 @@ if( ! $status )
   echo "Failed write of '$writeFile'\n\n";
   exit(1);
 }
-
+else if( ! isset($CLI["q"]) && ! isset($CLI["quiet"]) )
+{
+  echo "File written to '$writeFile'\n\n";
+}
 exit(0);
 
 ####
@@ -907,22 +914,22 @@ function make_shield( $X, $Y, $side, $time, $duration, $Z="1.5" )
   switch( strtoupper($side) )
   {
   case "A":
-  $shieldName = MODEL_NAME["Shield A"]["name"];
+    $shieldName = MODEL_NAME["Shield A"]["name"];
     break;
   case "B":
-  $shieldName = MODEL_NAME["Shield B"]["name"];
+    $shieldName = MODEL_NAME["Shield B"]["name"];
     break;
   case "C":
-  $shieldName = MODEL_NAME["Shield C"]["name"];
+    $shieldName = MODEL_NAME["Shield C"]["name"];
     break;
   case "D":
-  $shieldName = MODEL_NAME["Shield D"]["name"];
+    $shieldName = MODEL_NAME["Shield D"]["name"];
     break;
   case "E":
-  $shieldName = MODEL_NAME["Shield E"]["name"];
+    $shieldName = MODEL_NAME["Shield E"]["name"];
     break;
   case "F":
-  $shieldName = MODEL_NAME["Shield F"]["name"];
+    $shieldName = MODEL_NAME["Shield F"]["name"];
     break;
   }
 
