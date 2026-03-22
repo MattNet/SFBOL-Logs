@@ -36,6 +36,7 @@ define( 'MODEL_NAME', array(
   'Kzinti TCC' => array( "name" => 'Kzinti TCC', 'no_rotate' => false ),
   'LDR TCWL' => array( "name" => 'LDR TCWL', 'no_rotate' => false ),
   'Lyran TCC' => array( "name" => 'Lyran TCA', 'no_rotate' => false ),
+  'Neo-Tholian TNCA' => array( "name" => 'Tholian NCA', 'no_rotate' => false ),
   'Orion TBR' => array( "name" => 'Orion TBR', 'no_rotate' => false ),
   'Romulan TFH' => array( "name" => 'Romulan TFH', 'no_rotate' => false ),
   'Romulan TKE' => array( "name" => 'Romulan TKE', 'no_rotate' => false ),
@@ -141,7 +142,7 @@ $frameIncrement = 0; # Increments the number of frames used already. Important f
 $hexVertBump = 0; # Used to vertically offset alternating hexes
 $impulseActivity = array(); # this holds the data from the current impulse
 $LastLine = 0; # the last line of the log (extracted from the first (ship) unit)
-$output = "import bpy\nimport mathutils\nfrom mathutils import *; from math import *\n";
+$output = "import bpy\nimport mathutils\nfrom mathutils import *; from math import *\nfrom pathlib import Path\n";
 $output .= "\n#####\n# Impulses are ";
 if( $NOANIMATION )
   $output .= "either $FRAMESFORMOVE or ";
@@ -153,6 +154,11 @@ if( $NOANIMATION )
   $output .= "# - Impulses with no activity will skip the activity segments, but not the move segment.\n";
 $output .= "#####\n\n";
 $output .= "for obj in bpy.data.objects:\n   obj.select_set(False)\n\n";
+$output .= "for asset_library in bpy.context.preferences.filepaths.asset_libraries:\n";
+$output .= "    if asset_library.name != 'User Library':\n";
+$output .= "        continue  # Skip to the next iteration of the loop if the library name is not right\n";
+//$output .= "    library_name = asset_library.name\n";
+$output .= "    blend_files = [fp for fp in Path(asset_library.path).glob(\"**/*.blend\") if fp.is_file()]\n\n";
 $phaserMaterial = "Phaser Blast"; # Blender name of the texture to give the weapon blast
 $readFile = $CLIend[0];
 $Ships = array();
@@ -198,6 +204,7 @@ if( $log->error != "" )
 $unitCache = $log->get_units();
 
 # Get the python access method for each unit
+$output .= "###\n# Create each unit's model in the scene\n###\n";
 foreach( $unitCache as &$entry )
 {
   $entry["blender"] = "bpy.data.objects['".$entry["name"]."']";
@@ -223,8 +230,9 @@ foreach( $unitCache as &$entry )
     $LastLine = $entry["removed"];
 
 # duplicate templated items in Blender to create named items to be moved
+  $output .= "# Create \"".$entry["name"]."\" (".MODEL_NAME[$entry["type"]]["name"].")\n";
   $output .= blender_duplicate( MODEL_NAME[$entry["type"]]["name"] );
-  $output .= "obj.name = '".$entry["name"]."'\n";
+  $output .= "\nobj.name = '".$entry["name"]."'\n";
   $output .= "obj.hide_render = False\n";
   $output .= "obj.select_set(False)\n\n";
 }
@@ -235,9 +243,9 @@ $output .= "Phaser_Material = bpy.data.materials.new(name=\"$phaserMaterial\")\n
 $output .= "Phaser_Material.use_nodes = True\n";
 $output .= "Phaser_nodes = Phaser_Material.node_tree.nodes\n";
 $output .= "Phaser_links = Phaser_Material.node_tree.links\n";
-$output .= "Phaser_nodes[\"Principled BSDF\"].inputs[0].default_value = (1, 0, 0, 1)\n";
-$output .= "Phaser_nodes[\"Principled BSDF\"].inputs[26].default_value = (1, 0, 0, 1)\n";
-$output .= "Phaser_nodes[\"Principled BSDF\"].inputs[27].default_value = 2\n\n";
+$output .= "Phaser_nodes[\"Principled BSDF\"].inputs[0].default_value = (1, 0, 0, 1)\n"; # Base color (red)
+$output .= "Phaser_nodes[\"Principled BSDF\"].inputs[27].default_value = (1, 0, 0, 1)\n"; # Emission color
+$output .= "Phaser_nodes[\"Principled BSDF\"].inputs[28].default_value = 2\n\n"; # Emmision strength
 
 # go through each impulse
 for( $i=0; $i<=$LastLine; $i++ )
@@ -506,8 +514,10 @@ for( $i=0; $i<=$LastLine; $i++ )
 }
 
 # Handle the surrender
+/*
 $output .= make_flag( "13", "-14", $frameIncrement, (2 * $FRAMESPERACTION) );
 $frameIncrement += ( 2 * $FRAMESPERACTION ); # Add time for the flag waving
+*/
 
 # set the length of the animation
 # This is assuredly too large if $NOANIMATION is true
@@ -698,29 +708,27 @@ function keyframe_move( $unit, $X=null, $Y=null, $rotation=0, $delay=0, $suddenM
 ###
 function blender_duplicate( $modelName, $toCollection="Collection 1" )
 {
-  $out = "";
-  $fromCollection = "Collection 2"; # Blender collection holding the original model
+  $out = <<<HEREDOC
+try:
+  asset = bpy.data.objects["$modelName"]
+  asset.select_set(True)
+  bpy.context.view_layer.objects.active = asset
+  obj = bpy.context.active_object
+except KeyError:
+  print("Asset '$modelName' not found in the current scene. Attempting to load from asset library.")
+  for blend_file in blend_files:
+      with bpy.data.libraries.load(str(blend_file), assets_only=True) as (data_from, data_to):
+          if "$modelName" in data_from.objects:
+              data_to.objects = ["$modelName"]
+  # Link the appended object to the current scene
+  for obj in data_to.objects:
+    bpy.context.scene.collection.objects.link(obj)
+    print(f"Appended '$modelName' from {blend_file}")
+  # Set the active object and duplicate it
+  bpy.context.active_object.select_set(True)
+  bpy.context.view_layer.objects.active = bpy.context.active_object
 
-  $object = "bpy.data.objects[\"$modelName\"]";
-  $out .= "$object.select_set(True)\nbpy.context.view_layer.objects.active = $object\n";
-  $out .= "bpy.ops.object.duplicate(linked=0,mode='TRANSLATION')\n";
-  # Could use 'bpy.context.collection.objects.link()', but best to be explicit
-  $out .= "try:\n";
-  $out .= "    bpy.data.collections[\"$toCollection\"].objects.link(bpy.context.active_object)\n";
-  $out .= "except RuntimeError:\n";
-  $out .= "    True\n\n";
-  # remove (unlink) the duplicate model from the collection holding the original model
-  # if we unlink the model from all collections, then the model is deleted
-  if( $toCollection != $fromCollection )
-  {
-    $out .= "try:\n";
-    $out .= "    bpy.data.collections[\"$fromCollection\"].objects.unlink(bpy.context.active_object)\n";
-    $out .= "except RuntimeError:\n";
-    $out .= "    True\n\n";
-  }
-
-  $out .= "obj = bpy.context.active_object\n";
-
+HEREDOC;
   return $out;
 }
 
@@ -744,7 +752,7 @@ function card_set( $msg, $X, $Y, $time, $duration, $Z="1.5" )
   $cardName = MODEL_NAME["Card"]["name"];
   $out .=  "# Add speech bubble '$msg'\n";
   $out .= blender_duplicate( $cardName );
-  $out .= "obj.name = 'card $time'\n";
+  $out .= "\nobj.name = 'card $time'\n";
 
   # set the message
   $out .= "obj.modifiers[\"GeometryNodes\"][\"Socket_2\"] = \"$msg\"\n";
@@ -797,7 +805,7 @@ function make_flag( $X, $Y, $time, $duration, $Z="0" )
   $out = "# Move the Surrender Flag Pole\n";
   $out .= blender_duplicate( "Pole" );
   # mark the off-map location
-  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".($time-1).")\n";
+  $out .= "\nobj.keyframe_insert(data_path=\"location\", frame=".($time-1).")\n";
   $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $time + $duration + 1 ).")\n";
   # set the new location
   $out .= "obj.location = ($X, $Y, $Z)\n";
@@ -815,7 +823,7 @@ function make_flag( $X, $Y, $time, $duration, $Z="0" )
   # make + move the flag fabric
   $out .= "# Move the Surrender Flag\n";
   $out .= blender_duplicate( "Flag" );
-  $out .= "obj.name = '$fabricName'\n";
+  $out .= "\nobj.name = '$fabricName'\n";
   # mark the off-map location
   $out .= "obj.keyframe_insert(data_path=\"location\", frame=".($time-1).")\n";
   $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $time + $duration + 1 ).")\n";
@@ -936,7 +944,7 @@ function make_shield( $X, $Y, $side, $time, $duration, $Z="1.5" )
   # Duplicate the shield
   $out .=  "# Shield the unit\n";
   $out .= blender_duplicate( $shieldName );
-  $out .= "obj.name = 'shield $time'\n";
+  $out .= "\nobj.name = 'shield $time'\n";
   $out .= "obj.hide_render = False\n";
 
   # mark the off-map location
