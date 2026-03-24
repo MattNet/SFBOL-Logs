@@ -337,6 +337,10 @@ for( $i=0; $i<=$LastLine; $i++ )
 #     [type] => Lyran Shuttle
 #     [owner] => S04.2.2
 # ]
+          # skip the unit declaration and use the unit being added
+          if( $unitList[ $action["owner"] ]["basic"] == "ship" )
+            continue;
+
           $rot = 0;
           list( $XLoc, $YLoc ) = locationPixels( $action["location"] );
 
@@ -713,6 +717,10 @@ try:
   asset = bpy.data.objects["$modelName"]
   asset.select_set(True)
   bpy.context.view_layer.objects.active = asset
+  duplicated_asset = asset.copy()
+  bpy.context.collection.objects.link(duplicated_asset)
+  duplicated_asset.select_set(True)
+  bpy.context.view_layer.objects.active = duplicated_asset
   obj = bpy.context.active_object
 except KeyError:
   print("Asset '$modelName' not found in the current scene. Attempting to load from asset library.")
@@ -744,7 +752,7 @@ HEREDOC;
 # Returns:
 # - (string) The python code to show the card
 ###
-function card_set( $msg, $X, $Y, $time, $duration, $Z="1.5" )
+function card_set( $msg, $X, $Y, $time, $duration, $Z="1.85" )
 {
   $out = "";
 
