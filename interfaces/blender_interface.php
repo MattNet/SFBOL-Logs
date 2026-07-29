@@ -55,12 +55,14 @@ define( 'MODEL_NAME', array(
   'Frax Shuttle' => array( "name" => 'Federation Shuttle', 'no_rotate' => false ),
   'Gorn Plasma' => array( "name" => 'Plasma', 'no_rotate' => false ),
   'Gorn Shuttle' => array( "name" => 'Federation Shuttle', 'no_rotate' => false ),
-  'Hydran Fighter' => array( "name" => '', 'no_rotate' => false ), # No Stinger Model
+  'Hydran Fighter' => array( "name" => 'Hydran Stinger', 'no_rotate' => false ),
   'Hydran Shuttle' => array( "name" => 'Federation Shuttle', 'no_rotate' => false ),
   'ISC Plasma' => array( "name" => 'Plasma', 'no_rotate' => false ),
   'ISC Shuttle' => array( "name" => 'Federation Shuttle', 'no_rotate' => false ),
   'Klingon Drone' => array( "name" => 'Drone', 'no_rotate' => false ),
   'Klingon Shuttle' => array( "name" => 'Federation Shuttle', 'no_rotate' => false ),
+  'Kzinti Drone' => array( "name" => 'Drone', 'no_rotate' => false ),
+  'Kzinti Shuttle' => array( "name" => 'Federation Shuttle', 'no_rotate' => false ),
   'LDR ESG' => array( "name" => 'ESG', 'no_rotate' => true ),
   'LDR Shuttle' => array( "name" => 'Federation Shuttle', 'no_rotate' => false ),
   'Lyran ESG' => array( "name" => 'ESG', 'no_rotate' => true ),
@@ -69,7 +71,8 @@ define( 'MODEL_NAME', array(
   'Orion ESG' => array( "name" => 'ESG', 'no_rotate' => true ),
   'Orion Plasma' => array( "name" => 'Plasma', 'no_rotate' => false ),
   'Orion Shuttle' => array( "name" => 'Federation Shuttle', 'no_rotate' => false ),
-  'TFE Plasma' => array( "name" => 'Plasma', 'no_rotate' => false ),
+  'TFH Plasma' => array( "name" => 'Plasma', 'no_rotate' => false ),
+  'TFH Shuttle' => array( "name" => 'Federation Shuttle', 'no_rotate' => false ),
   'TKE Plasma' => array( "name" => 'Plasma', 'no_rotate' => false ),
   'TKE Shuttle' => array( "name" => 'Federation Shuttle', 'no_rotate' => false ),
   'TKR Plasma' => array( "name" => 'Plasma', 'no_rotate' => false ),
@@ -101,6 +104,9 @@ $XHEXSIZE = 0.9;
 $XOFFSET = 0;
 $YHEXSIZE = -1;
 $YOFFSET = 0;
+
+define('CARD_Z_AXIS', "2.25");
+define('PHASER_Z_AXIS', "0.6");
 
 # Allowed command line options
 $CLIoptions = "";
@@ -207,6 +213,12 @@ $unitCache = $log->get_units();
 $output .= "###\n# Create each unit's model in the scene\n###\n";
 foreach( $unitCache as &$entry )
 {
+  # error out if the model does not exist.
+  if( ! isset(MODEL_NAME[$entry["type"]]) ) {
+    echo "Model ".$entry["type"]." does not exist in the list of models.\n";
+    exit(1);
+  }
+
   $entry["blender"] = "bpy.data.objects['".$entry["name"]."']";
   $ShipsFacings[ $entry["name"] ] = "D"; // This is the model's initial facing. 'A' is pointing in the +Y direction
 
@@ -244,8 +256,8 @@ $output .= "Phaser_Material.use_nodes = True\n";
 $output .= "Phaser_nodes = Phaser_Material.node_tree.nodes\n";
 $output .= "Phaser_links = Phaser_Material.node_tree.links\n";
 $output .= "Phaser_nodes[\"Principled BSDF\"].inputs[0].default_value = (1, 0, 0, 1)\n"; # Base color (red)
-$output .= "Phaser_nodes[\"Principled BSDF\"].inputs[27].default_value = (1, 0, 0, 1)\n"; # Emission color
-$output .= "Phaser_nodes[\"Principled BSDF\"].inputs[28].default_value = 2\n\n"; # Emmision strength
+$output .= "Phaser_nodes[\"Principled BSDF\"].inputs[28].default_value = (1, 0, 0, 1)\n"; # Emission color
+$output .= "Phaser_nodes[\"Principled BSDF\"].inputs[29].default_value = 2.0\n\n"; # Emmision strength
 
 # go through each impulse
 for( $i=0; $i<=$LastLine; $i++ )
@@ -452,10 +464,8 @@ for( $i=0; $i<=$LastLine; $i++ )
           # Exclude non-weapons fire: web, etc
           if( $action["weapon"] == "Web Caster" )
             break;
-
           # Get the blender locations of the aggressor and defender
           $targetLocation = $log->get_unit_location( $action["target"], $i );
-
           $output .= "# ".$action["owner"]." fires on ".$action["target"]."\n";
           $output .= make_phaser( $action["owner location"], $targetLocation, $frame+$FRAMESFORMOVE+$FRAMESPERACTION );
 
@@ -531,8 +541,8 @@ $output .= "bpy.context.scene.frame_set(0)\n";
 if( ! isset($CLI["q"]) && ! isset($CLI["quiet"]) )
 {
   echo "###\nDebug Info:\n###\n";
-  echo "Unit List:\n";
-  print_r( $unitList );
+//  echo "Unit List:\n";
+//  print_r( $unitList );
   echo "Animation length: $frameIncrement frames, ".floor( $frameIncrement / 24 )." seconds, lasts until T".LogUnit::convertFromImp( $LastLine )."\n\n";
 }
 
@@ -679,13 +689,15 @@ function keyframe_move( $unit, $X=null, $Y=null, $rotation=0, $delay=0, $suddenM
   # standard movement animation and mark the previous location
   else
   {
-    if( isset($X) && isset($Y) ) # Movement may be missing (TACs, HETs, etc)
+    # Perform move
+    if( isset($X) && isset($Y) ) # Check for movement; it may be missing (TACs, HETs, etc)
     {
-      $out .= "bpy.context.object.keyframe_insert(data_path=\"location\", frame=".( $frame + $delay - 1 ).")\n";
+      $out .= "bpy.context.object.keyframe_insert(data_path=\"location\", frame=".( $frame + $delay ).")\n";
       # set the location of the new impulse
       $out .= "bpy.context.object.location = ($X, $Y, $Z)\n";
       $out .= "bpy.context.object.keyframe_insert(data_path=\"location\", frame=".( $frame + $FRAMESFORMOVE + $delay ).")\n";
     }
+    # Perform rotation
     if( $rotation != "" && $rotation <> 0 ) # skip if rotation is missing or is 0 degrees
     {
       $out .= "rotation = degrees($unit.rotation_euler[2]) + ($rotation)\n";
@@ -752,7 +764,7 @@ HEREDOC;
 # Returns:
 # - (string) The python code to show the card
 ###
-function card_set( $msg, $X, $Y, $time, $duration, $Z="1.85" )
+function card_set( $msg, $X, $Y, $time, $duration, $Z=CARD_Z_AXIS )
 {
   $out = "";
 
@@ -763,7 +775,7 @@ function card_set( $msg, $X, $Y, $time, $duration, $Z="1.85" )
   $out .= "\nobj.name = 'card $time'\n";
 
   # set the message
-  $out .= "obj.modifiers[\"GeometryNodes\"][\"Socket_2\"] = \"$msg\"\n";
+  $out .= "obj.modifiers[\"GeometryNodes\"].properties.inputs.Socket_2.value = \"$msg\"\n";
   $out .= "obj.data.update()\n";
   $out .= "obj.hide_render = False\n";
   # mark the off-map location
@@ -883,14 +895,13 @@ function make_phaser( $ownerLocation, $targetLocation, $startFrame )
   # Figure the parts of a cylinder between the aggressor and defender
   $dx = $targXLoc - $ownXLoc;
   $dy = $targYLoc - $ownYLoc;
-  $dz = 0.6;
   $rad = 0.03;
   $dist = round( sqrt( $dx**2 + $dy**2 ), 4 );
   $phi = round( atan2( $dy, $dx ), 4 );
 
   # draw a cylinder between the aggressor and defender
   $out .= "bpy.ops.mesh.primitive_cylinder_add( radius = $rad, depth = $dist, ";
-  $out .= "location = (".( $dx/2 + $ownXLoc ).", ".( $dy/2 + $ownYLoc ).", $dz ) )\n";
+  $out .= "location = (".( $dx/2 + $ownXLoc ).", ".( $dy/2 + $ownYLoc ).", ".PHASER_Z_AXIS." ) )\n";
   $out .= "bpy.context.object.rotation_euler = ( $phi, -1.5708, 0 )\n";
   # mark this frame as the start of showing the phaser
   $out .= "bpy.context.object.keyframe_insert(data_path=\"location\", frame=$startFrame)\n";
@@ -1010,7 +1021,7 @@ function impulse_display( $time )
   $out .= "$cardObject.select_set(True)\nbpy.context.view_layer.objects.active = $cardObject\n";
 
   # set the message
-  $out .= "$cardObject.modifiers[\"GeometryNodes\"][\"Socket_2\"] = \"T".$turn."i".$impulse."\"\n";
+  $out .= "$cardObject.modifiers[\"GeometryNodes\"].properties.inputs.Socket_2.value = \"T".$turn."i".$impulse."\"\n";
   $out .= "$cardObject.data.update()\n\n";
   $out .= "$cardObject.select_set(False)\n";
 
