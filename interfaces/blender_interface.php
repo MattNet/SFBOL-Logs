@@ -148,7 +148,9 @@ $frameIncrement = 0; # Increments the number of frames used already. Important f
 $hexVertBump = 0; # Used to vertically offset alternating hexes
 $impulseActivity = array(); # this holds the data from the current impulse
 $LastLine = 0; # the last line of the log (extracted from the first (ship) unit)
-$output = "import bpy\nimport mathutils\nfrom mathutils import *; from math import *\nfrom pathlib import Path\n";
+$output = "import bpy\nimport mathutils\nfrom mathutils import *; from math import *\nfrom pathlib import Path\nimport logging\n";
+$output .= "logging.basicConfig(\n  level=logging.INFO,\n  format=\"%(levelname)s: %(message)s\"\n)\n";
+$output .= "logger = logging.getLogger(__name__)\n";
 $output .= "\n#####\n# Impulses are ";
 if( $NOANIMATION )
   $output .= "either $FRAMESFORMOVE or ";
@@ -735,7 +737,7 @@ try:
   bpy.context.view_layer.objects.active = duplicated_asset
   obj = bpy.context.active_object
 except KeyError:
-  print("Asset '$modelName' not found in the current scene. Attempting to load from asset library.")
+  logger.warning("Asset '$modelName' not found in the current scene. Attempting to load from asset library.")
   for blend_file in blend_files:
       with bpy.data.libraries.load(str(blend_file), assets_only=True) as (data_from, data_to):
           if "$modelName" in data_from.objects:
@@ -743,11 +745,13 @@ except KeyError:
   # Link the appended object to the current scene
   for obj in data_to.objects:
     bpy.context.scene.collection.objects.link(obj)
-    print(f"Appended '$modelName' from {blend_file}")
+    logger.warning("Appended '$modelName' from {blend_file}")
   # Set the active object and duplicate it
   bpy.context.active_object.select_set(True)
   bpy.context.view_layer.objects.active = bpy.context.active_object
-
+  if obj is None:
+    logger.error("No object was created or loaded.")
+    raise RuntimeError("Unable to create '$modelName'.")
 HEREDOC;
   return $out;
 }
