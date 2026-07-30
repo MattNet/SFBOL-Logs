@@ -732,6 +732,7 @@ try:
   asset.select_set(True)
   bpy.context.view_layer.objects.active = asset
   duplicated_asset = asset.copy()
+  duplicated_asset.data = asset.data.copy()
   bpy.context.collection.objects.link(duplicated_asset)
   duplicated_asset.select_set(True)
   bpy.context.view_layer.objects.active = duplicated_asset
