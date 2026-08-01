@@ -31,7 +31,7 @@ define( 'MODEL_NAME', array(
   'Frax TC (Playtest)' => array( "name" => 'Frax TCA', 'no_rotate' => false ),
   'Gorn TCC' => array( "name" => 'Gorn TCA', 'no_rotate' => false ),
   'Hydran TLM' => array( "name" => 'Hydran TCC', 'no_rotate' => false ),
-  'ISC TCC' => array( "name" => 'ISC CA', 'no_rotate' => false ),
+  'ISC TCC' => array( "name" => 'ISC TCA', 'no_rotate' => false ),
   'Klingon TD7C' => array( "name" => 'Klingon D7CT', 'no_rotate' => false ),
   'Kzinti TCC' => array( "name" => 'Kzinti TCC', 'no_rotate' => false ),
   'LDR TCWL' => array( "name" => 'LDR TCWL', 'no_rotate' => false ),
@@ -268,12 +268,15 @@ for( $i=0; $i<=$LastLine; $i++ )
   $impulseActivity = $log->read( LogUnit::convertFromImp( $i ) );
   $frame = $frameIncrement;
   $flagWasActivity = false;
-
   $output .= "# Start of impulse ".LogUnit::convertFromImp( $i ).", animation frame $frame\n\n";
 
-  # Show the turn start for (roughly) 2 impulses
+  # Show the turn number for (roughly) 2 impulses
   if( $i % 32 == 1 )
-    $output .= impulse_display( $i, ($FRAMESFORMOVE + ($FRAMESPERACTION * 2))*2 );
+    $output .= impulse_display( $frame, ($FRAMESFORMOVE + ($FRAMESPERACTION * 2))*1.5, $i, false );
+/*
+  # Show each impulse number
+  $output .= impulse_display( $frame, ($FRAMESFORMOVE + ($FRAMESPERACTION * 1)), $i );
+*/
 
   # skip if nothing happened here
   if( empty($impulseActivity) )
@@ -730,31 +733,38 @@ function blender_duplicate( $modelName, $toCollection="Collection 1" )
 {
   $out = <<<HEREDOC
 try:
+  # Duplicate an existing object
   asset = bpy.data.objects["$modelName"]
   asset.select_set(True)
   bpy.context.view_layer.objects.active = asset
   duplicated_asset = asset.copy()
   duplicated_asset.data = asset.data.copy()
-  bpy.context.collection.objects.link(duplicated_asset)
-  duplicated_asset.select_set(True)
-  bpy.context.view_layer.objects.active = duplicated_asset
-  obj = bpy.context.active_object
+  obj = duplicated_asset
 except KeyError:
+  # Load object from an Asset Library
   logger.warning("Asset '$modelName' not found in the current scene. Attempting to load from asset library.")
+  loaded_obj = None
   for blend_file in blend_files:
-      with bpy.data.libraries.load(str(blend_file), assets_only=True) as (data_from, data_to):
-          if "$modelName" in data_from.objects:
-              data_to.objects = ["$modelName"]
-  # Link the appended object to the current scene
-  for obj in data_to.objects:
-    bpy.context.scene.collection.objects.link(obj)
-    logger.warning("Appended '$modelName' from {blend_file}")
-  # Set the active object and duplicate it
-  bpy.context.active_object.select_set(True)
-  bpy.context.view_layer.objects.active = bpy.context.active_object
+    with bpy.data.libraries.load(str(blend_file), assets_only=True) as (data_from, data_to):
+      if "$modelName" in data_from.objects:
+        data_to.objects = ["$modelName"]
+    if data_to.objects and data_to.objects[0]:
+      loaded_obj = data_to.objects[0]
+      break
+  obj = loaded_obj
   if obj is None:
     logger.error("No object was created or loaded.")
     raise RuntimeError("Unable to create '$modelName'.")
+  logger.warning("Appended '$modelName' from %s", blend_file)
+# Link the appended object to the current scene
+bpy.context.scene.collection.objects.link(obj)
+obj.select_set(True)
+bpy.context.view_layer.objects.active = obj
+# Set the active object and duplicate it
+obj.select_set(True)
+bpy.context.view_layer.objects.active = obj
+# Done creating new object
+
 HEREDOC;
   return $out;
 }
@@ -1004,30 +1014,37 @@ function make_tractor( $ownerLocation, $targetLocation, $startFrame )
 # Emits the python code to update the turn/impulse card in front of the camera
 ###
 # Args are:
-# - (string) The impulse being displayed, in either format
+# - (int) The frame to begin the display
 # - (int) How long to show the message, in frames
+# - (string) The impulse being displayed, in either format
+# - (boolean) [optional] Show the impulse number (always shows the turn number)
 # Returns:
 # - (string) The python code to show the card
 ###
-function impulse_display( $time, $duration )
+function impulse_display( $startFrame, $duration, $time, $showImpulse=true )
 {
   $out = "";
   $camObjName = "Camera.001";
   $X = "0.69";
   $Y = "0.4";
   $Z = "-1.0";
+  $scaleValue = "0.03";
 
   # get the turn and impulse from the time
   if( ! str_contains( $time, "." ) )
     $time = LogUnit::convertFromImp( $time );
   list( $turn, $impulse) = explode( ".", $time );
 
-  $msg = "T $turn, I $impulse";
+  if( $showImpulse )
+    $msg = "T$turn, I$impulse";
+  else
+    $msg = "Turn $turn";
 
   # Duplicate and select the card
   $cardName = MODEL_NAME["Card"]["name"];
   $out .=  "# Add impulse display '$msg'\n";
   $out .= blender_duplicate( $cardName );
+  $out .= "obj.constraints.clear()\n";
   $out .= "\nobj.name = 'card $time'\n";
 
   # set the message
@@ -1038,20 +1055,22 @@ function impulse_display( $time, $duration )
   $out .= "obj.matrix_parent_inverse.identity()\n";
   $out .= "obj.location = ($X, $Y, $Z)\n";
   $out .= "obj.rotation_euler = (0.0, 0.0, 0.0)\n";
+  # Scale the card
+  $out .= "obj.scale = ($scaleValue,$scaleValue,$scaleValue)\n";
   # set invisible
   $out .= "obj.hide_viewport = True\n";
   $out .= "obj.hide_render = True\n";
-  $out .= "obj.keyframe_insert(\"hide_viewport\", frame=".($time-1).")\n";
-  $out .= "obj.keyframe_insert(\"hide_render\", frame=".($time-1).")\n";
-  $out .= "obj.keyframe_insert(\"hide_viewport\", frame=".($time + $duration + 1).")\n";
-  $out .= "obj.keyframe_insert(\"hide_render\", frame=".($time + $duration + 1).")\n";
+  $out .= "obj.keyframe_insert(\"hide_viewport\", frame=".($startFrame-1).")\n";
+  $out .= "obj.keyframe_insert(\"hide_render\", frame=".($startFrame-1).")\n";
+  $out .= "obj.keyframe_insert(\"hide_viewport\", frame=".($startFrame + $duration + 1).")\n";
+  $out .= "obj.keyframe_insert(\"hide_render\", frame=".($startFrame + $duration + 1).")\n";
   # set visable
   $out .= "obj.hide_viewport = False\n";
   $out .= "obj.hide_render = False\n";
-  $out .= "obj.keyframe_insert(\"hide_viewport\", frame=".($time).")\n";
-  $out .= "obj.keyframe_insert(\"hide_render\", frame=".($time).")\n";
-  $out .= "obj.keyframe_insert(\"hide_viewport\", frame=".($time + $duration).")\n";
-  $out .= "obj.keyframe_insert(\"hide_render\", frame=".($time + $duration).")\n";
+  $out .= "obj.keyframe_insert(\"hide_viewport\", frame=".($startFrame).")\n";
+  $out .= "obj.keyframe_insert(\"hide_render\", frame=".($startFrame).")\n";
+  $out .= "obj.keyframe_insert(\"hide_viewport\", frame=".($startFrame + $duration).")\n";
+  $out .= "obj.keyframe_insert(\"hide_render\", frame=".($startFrame + $duration).")\n";
   # remove after $duration
   $out .= "obj.select_set(False)\n\n";
 
