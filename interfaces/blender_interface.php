@@ -271,7 +271,9 @@ for( $i=0; $i<=$LastLine; $i++ )
 
   $output .= "# Start of impulse ".LogUnit::convertFromImp( $i ).", animation frame $frame\n\n";
 
-//  $output .= impulse_display( $i ); # Update the incrementing time display
+  # Show the turn start for (roughly) 2 impulses
+  if( $i % 32 == 1 )
+    $output .= impulse_display( $i, ($FRAMESFORMOVE + ($FRAMESPERACTION * 2))*2 );
 
   # skip if nothing happened here
   if( empty($impulseActivity) )
@@ -1003,32 +1005,55 @@ function make_tractor( $ownerLocation, $targetLocation, $startFrame )
 ###
 # Args are:
 # - (string) The impulse being displayed, in either format
+# - (int) How long to show the message, in frames
 # Returns:
-# - (string) The python code to affect the move and turn
+# - (string) The python code to show the card
 ###
-function impulse_display( $time )
+function impulse_display( $time, $duration )
 {
-#####
-# Need to animate the text input
-#####
-
   $out = "";
+  $camObjName = "Camera.001";
+  $X = "0.69";
+  $Y = "0.4";
+  $Z = "-1.0";
 
   # get the turn and impulse from the time
   if( ! str_contains( $time, "." ) )
     $time = LogUnit::convertFromImp( $time );
   list( $turn, $impulse) = explode( ".", $time );
 
-  $out = "# Display \"T".$turn."i".$impulse."\" at camera.\n";
-  # select the impulse card
-  $cardName = MODEL_NAME["CamCard"]["name"];
-  $cardObject = "bpy.data.objects[\"$cardName\"]";
-  $out .= "$cardObject.select_set(True)\nbpy.context.view_layer.objects.active = $cardObject\n";
+  $msg = "T $turn, I $impulse";
+
+  # Duplicate and select the card
+  $cardName = MODEL_NAME["Card"]["name"];
+  $out .=  "# Add impulse display '$msg'\n";
+  $out .= blender_duplicate( $cardName );
+  $out .= "\nobj.name = 'card $time'\n";
 
   # set the message
-  $out .= "$cardObject.modifiers[\"GeometryNodes\"].properties.inputs.Socket_2.value = \"T".$turn."i".$impulse."\"\n";
-  $out .= "$cardObject.data.update()\n\n";
-  $out .= "$cardObject.select_set(False)\n";
+  $out .= "obj.modifiers[\"GeometryNodes\"].properties.inputs.Socket_2.value = \"$msg\"\n";
+  $out .= "obj.data.update()\n";
+  # mark the location to the camera
+  $out .= "obj.parent = bpy.data.objects[\"$camObjName\"]\n";
+  $out .= "obj.matrix_parent_inverse.identity()\n";
+  $out .= "obj.location = ($X, $Y, $Z)\n";
+  $out .= "obj.rotation_euler = (0.0, 0.0, 0.0)\n";
+  # set invisible
+  $out .= "obj.hide_viewport = True\n";
+  $out .= "obj.hide_render = True\n";
+  $out .= "obj.keyframe_insert(\"hide_viewport\", frame=".($time-1).")\n";
+  $out .= "obj.keyframe_insert(\"hide_render\", frame=".($time-1).")\n";
+  $out .= "obj.keyframe_insert(\"hide_viewport\", frame=".($time + $duration + 1).")\n";
+  $out .= "obj.keyframe_insert(\"hide_render\", frame=".($time + $duration + 1).")\n";
+  # set visable
+  $out .= "obj.hide_viewport = False\n";
+  $out .= "obj.hide_render = False\n";
+  $out .= "obj.keyframe_insert(\"hide_viewport\", frame=".($time).")\n";
+  $out .= "obj.keyframe_insert(\"hide_render\", frame=".($time).")\n";
+  $out .= "obj.keyframe_insert(\"hide_viewport\", frame=".($time + $duration).")\n";
+  $out .= "obj.keyframe_insert(\"hide_render\", frame=".($time + $duration).")\n";
+  # remove after $duration
+  $out .= "obj.select_set(False)\n\n";
 
   return $out;
 }
