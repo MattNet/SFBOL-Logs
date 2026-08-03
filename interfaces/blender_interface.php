@@ -86,13 +86,12 @@ define( 'MODEL_NAME', array(
 # Misc
   'Andromedan DisDev' => array( "name" => 'DisDev Marker', 'no_rotate' => true ),
   'Card' => array( "name" => 'Card', 'no_rotate' => true ),
-  'CamCard' => array( "name" => 'Camera Title', 'no_rotate' => true ),
-  'Shield A' => array( "name" => 'shield.front', 'no_rotate' => false ),
-  'Shield B' => array( "name" => 'shield.left', 'no_rotate' => false ),
-  'Shield C' => array( "name" => 'shield.left', 'no_rotate' => false ),
-  'Shield D' => array( "name" => 'shield.rear', 'no_rotate' => false ),
-  'Shield E' => array( "name" => 'shield.right', 'no_rotate' => false ),
-  'Shield F' => array( "name" => 'shield.right', 'no_rotate' => false ),
+  'Shield A' => array( "name" => 'Shield-1', 'no_rotate' => false ),
+  'Shield B' => array( "name" => 'Shield-2', 'no_rotate' => false ),
+  'Shield C' => array( "name" => 'Shield-3', 'no_rotate' => false ),
+  'Shield D' => array( "name" => 'Shield-4', 'no_rotate' => false ),
+  'Shield E' => array( "name" => 'Shield-5', 'no_rotate' => false ),
+  'Shield F' => array( "name" => 'Shield-6', 'no_rotate' => false ),
 ) );
 
 # these are configuration variables
@@ -107,6 +106,7 @@ $YOFFSET = 0;
 
 define('CARD_Z_AXIS', "2.25");
 define('PHASER_Z_AXIS', "0.6");
+define('SHIELD_Z_AXIS', "1.25");
 
 # Allowed command line options
 $CLIoptions = "";
@@ -483,7 +483,7 @@ for( $i=0; $i<=$LastLine; $i++ )
         else if( isset($action["total"]) )
         {
 # $action [
-#     [direction] => [ "A"=>TRUE ]
+#     [direction] => [ "A"=>1 ]
 #     [internals] => 7
 #     [owner] => ncc1792
 #     [owner location] => 1234
@@ -501,8 +501,16 @@ for( $i=0; $i<=$LastLine; $i++ )
 
           # draw the shields
           if( $action["shields"] > 0 )
+//{
+//echo "$frame\n";
+//print_r($action);
+//print_r($action["direction"]);
             foreach( $action["direction"] as $dir=>$value )
-              make_shield( $XLoc, $YLoc, $dir , $frame+$FRAMESFORMOVE+$FRAMESPERACTION, $FRAMESPERACTION );
+{
+//echo "$frame\n";
+//echo make_shield( $XLoc, $YLoc, $dir , $frame+$FRAMESFORMOVE+$FRAMESPERACTION, $FRAMESPERACTION );
+              $output .= make_shield( $XLoc, $YLoc, $dir , $frame+$FRAMESFORMOVE+$FRAMESPERACTION, $FRAMESPERACTION );
+}
         }
       }
     }
@@ -764,7 +772,6 @@ bpy.context.view_layer.objects.active = obj
 obj.select_set(True)
 bpy.context.view_layer.objects.active = obj
 # Done creating new object
-
 HEREDOC;
   return $out;
 }
@@ -945,12 +952,13 @@ function make_phaser( $ownerLocation, $targetLocation, $startFrame )
 # - (int) The Y-location to move to, in blender units
 # - (string) Which side of shield to show: A-F
 #            Where A is front, clockwise, to F is front-left
+# - (int) The blender frame to begin
 # - (int) How long to show the shield, in frames
 # - (int) [optional] The Z-location to move to, in blender units
 # Returns:
 # - (string) The python code to show the shield
 ###
-function make_shield( $X, $Y, $side, $time, $duration, $Z="1.5" )
+function make_shield( $X, $Y, $side, $startFrame, $duration, $Z=SHIELD_Z_AXIS )
 {
   $out = "";
 
@@ -980,17 +988,17 @@ function make_shield( $X, $Y, $side, $time, $duration, $Z="1.5" )
   # Duplicate the shield
   $out .=  "# Shield the unit\n";
   $out .= blender_duplicate( $shieldName );
-  $out .= "\nobj.name = 'shield $time'\n";
+  $out .= "\nobj.name = 'shield $startFrame'\n";
   $out .= "obj.hide_render = False\n";
 
   # mark the off-map location
-  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".($time-1).")\n";
-  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $time + $duration + 1 ).")\n";
+  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".($startFrame-1).")\n";
+  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $startFrame + $duration + 1 ).")\n";
   # set the new location
   $out .= "obj.location = ($X, $Y, $Z)\n";
-  $out .= "obj.keyframe_insert(data_path=\"location\", frame=$time)\n";
+  $out .= "obj.keyframe_insert(data_path=\"location\", frame=$startFrame)\n";
   # remove after $duration
-  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $time + $duration ).")\n";
+  $out .= "obj.keyframe_insert(data_path=\"location\", frame=".( $startFrame + $duration ).")\n";
   $out .= "obj.select_set(False)\n\n";
 
   return $out;
